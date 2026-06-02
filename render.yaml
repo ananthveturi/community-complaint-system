@@ -3,9 +3,17 @@ services:
     name: community-complaint-system
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    disk:
+      name: complaints-disk
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
         value: 3.12.3
+      - key: DATABASE_PATH
+        value: /data/complaints.db
+      - key: UPLOAD_FOLDER
+        value: /data/uploads

@@ -8,7 +8,7 @@ PNG_BYTES = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x0
 
 def create_mock_images():
     """Create mock image files in the upload folder for demo visual proofs."""
-    upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+    upload_dir = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads'))
     os.makedirs(upload_dir, exist_ok=True)
     
     images = {

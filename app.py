@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-fallback-change-me-in-production')
 
 # Configuration
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads'))
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Max 5MB file upload limit
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -17,10 +17,32 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # Ensure folders exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Custom route to serve uploads if they are stored in a persistent volume outside of static/
+@app.route('/static/uploads/<path:filename>')
+def serve_upload_file(filename):
+    from flask import send_from_directory
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 # Initialize database on startup
-if not os.path.exists(database.DB_PATH):
+db_exists = os.path.exists(database.DB_PATH)
+if not db_exists:
     print("Database not found. Initializing database schema...")
     database.init_db()
+
+# Auto-seed database if there are no users present
+try:
+    conn = database.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM users")
+    user_count = cursor.fetchone()[0]
+    conn.close()
+    if user_count == 0:
+        print("No users found in database. Auto-seeding default administrator and demonstration grievances...")
+        import seed
+        seed.seed_database()
+        print("Database auto-seeding successful.")
+except Exception as e:
+    print(f"Error during automatic database initialization/seeding: {e}")
 
 def allowed_file(filename):
     """Check if uploaded file has a secure permitted extension."""

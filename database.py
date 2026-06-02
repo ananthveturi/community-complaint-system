@@ -2,7 +2,7 @@ import sqlite3
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'complaints.db')
+DB_PATH = os.environ.get('DATABASE_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'complaints.db'))
 
 def get_db():
     """Establish and return a database connection with dict-like row formatting."""
@@ -16,6 +16,11 @@ def init_db():
     schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'schema.sql')
     with open(schema_path, 'r') as f:
         schema = f.read()
+        
+    # Ensure the parent directory of the database file exists
+    db_dir = os.path.dirname(os.path.abspath(DB_PATH))
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
         
     conn = get_db()
     try:
