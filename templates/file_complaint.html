@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}File Complaint - CivicConnect{% endblock %}
+
+{% block content %}
+<div class="glass-container" style="max-width: 700px;">
+    <div style="margin-bottom: 2rem;">
+        <a href="/dashboard" style="color: var(--text-muted); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+            &larr; Back to Dashboard
+        </a>
+        <h1 style="font-weight: 700; margin-top: 0.5rem;">File a New Complaint</h1>
+        <p style="color: var(--text-secondary);">Provide detail, location, and supporting pictures so municipal authorities can act quickly.</p>
+    </div>
+
+    <div class="glass-card no-hover">
+        <form action="/file-complaint" method="POST" enctype="multipart/form-data">
+            
+            <div class="form-group">
+                <label for="title">Complaint Title</label>
+                <input type="text" id="title" name="title" class="form-control" placeholder="Briefly name the issue (e.g. Waterlogging on Main Ave)" required autofocus>
+            </div>
+            
+            <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 0;">
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" class="form-control" required>
+                        <option value="" disabled selected>Select category...</option>
+                        <option value="Roads & Traffic">Roads & Traffic (Potholes, Signals)</option>
+                        <option value="Sanitation & Waste">Sanitation & Waste (Garbage, Drains)</option>
+                        <option value="Water Supply">Water Supply (Leakage, Shortage)</option>
+                        <option value="Electricity & Power">Electricity & Power (Outage, Streetlight)</option>
+                        <option value="Public Safety">Public Safety (Vandalism, Fire Hazard)</option>
+                        <option value="Parks & Recreation">Parks & Recreation (Damaged bench, Overgrowth)</option>
+                        <option value="Other">Other Issues</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location / Landmark</label>
+                    <input type="text" id="location" name="location" class="form-control" placeholder="Street address or nearest landmark" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Detailed Description</label>
+                <textarea id="description" name="description" class="form-control" rows="5" placeholder="Explain the issue in detail. Mention when it started, how it affects residents, etc." required></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label>Supporting Photo (Optional)</label>
+                <div class="file-upload-wrapper">
+                    <div class="upload-placeholder">
+                        <div class="upload-icon">📸</div>
+                        <p style="font-weight: 600; margin-bottom: 0.25rem;">Click to upload photo</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Supports PNG, JPG, JPEG (Max 5MB)</p>
+                    </div>
+                    <input type="file" name="image" class="file-upload-input" accept="image/*" id="complaint_image">
+                    <img src="" alt="Selected Preview" class="image-preview">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <a href="/dashboard" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Submit Complaint</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

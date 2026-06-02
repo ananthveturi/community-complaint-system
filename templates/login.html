@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Login - CivicConnect{% endblock %}
+
+{% block content %}
+<div class="glass-container" style="display: flex; justify-content: center; align-items: center; min-height: 70vh;">
+    <div class="glass-card no-hover" style="max-width: 450px; width: 100%;">
+        <h2 style="text-align: center; margin-bottom: 0.5rem; font-weight: 700;">Welcome Back</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Log in to file or track complaints</p>
+        
+        <form action="/login" method="POST" id="login-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required autofocus>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <div class="flex-row-between" style="margin-bottom: 0.5rem;">
+                    <label for="password" style="margin: 0;">Password</label>
+                </div>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1.5rem;">Log In</button>
+        </form>
+
+        <div style="text-align: center; font-size: 0.95rem; color: var(--text-secondary);">
+            Don't have an account? <a href="/register" style="color: var(--primary); font-weight: 600; text-decoration: none;">Register here</a>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--bg-card-border); margin: 2rem 0 1.5rem 0;">
+        
+        <!-- Demonstration Note -->
+        <div style="background: var(--primary-light); padding: 1rem; border-radius: var(--border-radius-sm); border: 1px solid rgba(99, 102, 241, 0.1); font-size: 0.85rem;">
+            <p style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">🔧 Sandbox Credentials:</p>
+            <p style="color: var(--text-secondary);"><strong>Admin:</strong> <code>admin</code> / <code>admin123</code></p>
+            <p style="color: var(--text-secondary); margin-top: 0.25rem;"><em>Or register a new citizen account to test submission workflow!</em></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

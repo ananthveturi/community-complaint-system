@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}CivicConnect - Digital Community Complaint Resolution Platform{% endblock %}
+
+{% block content %}
+<div class="glass-container">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <h1 class="hero-title" id="landing-title">Empowering Communities, Resolving Concerns</h1>
+        <p class="hero-subtitle">
+            Say goodbye to paper forms, long queues, and unanswered emails. File your grievances online, monitor status updates in real-time, and get visual verification once issues are resolved.
+        </p>
+        <div class="hero-buttons">
+            {% if session.get('user_id') %}
+                {% if session.get('role') == 'admin' %}
+                    <a href="/admin/dashboard" class="btn btn-primary" id="hero-admin-btn">Access Admin Control panel</a>
+                {% else %}
+                    <a href="/file-complaint" class="btn btn-primary" id="hero-file-btn">📝 File a Complaint</a>
+                    <a href="/dashboard" class="btn btn-secondary" id="hero-dash-btn">View My Dashboard</a>
+                {% endif %}
+            {% else %}
+                <a href="/register" class="btn btn-primary" id="hero-register-btn">Get Started</a>
+                <a href="/login" class="btn btn-secondary" id="hero-login-btn">Citizen & Admin Login</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Stats Banner -->
+    <div class="stats-summary" style="margin-bottom: 4rem;">
+        <div class="stat-card">
+            <span class="stat-val" style="color: var(--success);">94.8%</span>
+            <span class="stat-lbl">Resolution Rate</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-val" style="color: var(--info);">36 Hrs</span>
+            <span class="stat-lbl">Average Response Time</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-val" style="color: var(--primary);">4.8 ★</span>
+            <span class="stat-lbl">Citizen Satisfaction</span>
+        </div>
+    </div>
+
+    <!-- Core Features Grid -->
+    <h2 style="text-align: center; margin-bottom: 2rem; font-weight: 700;">How CivicConnect Works</h2>
+    <div class="grid-3" style="margin-bottom: 3rem;">
+        <div class="glass-card text-center feature-card" id="feature-submit">
+            <div class="feature-icon">📝</div>
+            <h3>1. File Instantly</h3>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                Submit details, category, specific location, and snap a picture of the problem area.
+            </p>
+        </div>
+        
+        <div class="glass-card text-center feature-card" id="feature-track">
+            <div class="feature-icon">📈</div>
+            <h3>2. Real-Time Tracking</h3>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                Monitor the exact status (Under Review, In Progress) and discuss with officials via integrated comments.
+            </p>
+        </div>
+
+        <div class="glass-card text-center feature-card" id="feature-verify">
+            <div class="feature-icon">📸</div>
+            <h3>3. Visual Verification</h3>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
+                Administrators must upload a photo of the completed solution as proof of work before resolution.
+            </p>
+        </div>
+    </div>
+
+    <!-- Info Section with Callout -->
+    <div class="glass-card no-hover" style="background: var(--primary-light); border-color: rgba(99, 102, 241, 0.2); padding: 3rem; text-align: center;">
+        <h2 style="color: var(--primary); margin-bottom: 1rem;">Looking for accountability?</h2>
+        <p style="max-width: 700px; margin: 0 auto 1.5rem auto; color: var(--text-secondary); line-height: 1.6;">
+            CivicConnect fosters trust through double-photo verification. Citizens submit the issue photograph, and municipal officials upload the resolved resolution photo (e.g. patched pothole, cleaned park, repaired wire) to verify compliance.
+        </p>
+        {% if not session.get('user_id') %}
+            <a href="/register" class="btn btn-primary">Create Your Citizen Account</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

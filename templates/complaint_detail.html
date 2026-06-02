@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint #{{ complaint.id }} - CivicConnect{% endblock %}
+
+{% block content %}
+<div class="glass-container">
+    <!-- Back Navigation -->
+    <div style="margin-bottom: 1.5rem;">
+        {% if session.get('role') == 'admin' %}
+            <a href="/admin/dashboard" style="color: var(--text-muted); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                &larr; Back to Admin Dashboard
+            </a>
+        {% else %}
+            <a href="/dashboard" style="color: var(--text-muted); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                &larr; Back to My Dashboard
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Main Grid layout: Details vs. Timeline/Comments -->
+    <div class="grid-2">
+        
+        <!-- Left Column: Details & Images -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- Complaint Summary Card -->
+            <div class="glass-card no-hover">
+                <div class="flex-row-between" style="margin-bottom: 1rem; align-items: flex-start; gap: 0.5rem;">
+                    <span class="badge badge-{{ 'pending' if complaint.status == 'Pending' else 'review' if complaint.status == 'Under Review' else 'progress' if complaint.status == 'In Progress' else 'resolved' if complaint.status == 'Resolved' else 'rejected' }}" style="font-size: 0.9rem;">
+                        {{ complaint.status }}
+                    </span>
+                    <span style="font-size: 0.9rem; color: var(--text-muted);">
+                        Filed: {{ complaint.created_at }}
+                    </span>
+                </div>
+                
+                <h1 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 1rem; line-height: 1.3;">{{ complaint.title }}</h1>
+                
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.9rem; background: var(--bg-primary); padding: 0.35rem 0.65rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
+                        📂 Category: <strong>{{ complaint.category }}</strong>
+                    </span>
+                    <span style="font-size: 0.9rem; background: var(--bg-primary); padding: 0.35rem 0.65rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
+                        📍 Location: <strong>{{ complaint.location }}</strong>
+                    </span>
+                    {% if complaint.department %}
+                    <span style="font-size: 0.9rem; background: var(--primary-light); color: var(--primary); padding: 0.35rem 0.65rem; border-radius: var(--border-radius-sm); font-weight: 600;">
+                        🏢 Department: {{ complaint.department }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 0.5rem; font-weight: 600;">Description</h3>
+                    <p style="color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">{{ complaint.description }}</p>
+                </div>
+
+                <div style="font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--bg-card-border); padding-top: 1rem;">
+                    Submitted by: <strong>{{ complaint.citizen_name }}</strong><br>
+                    Contact Info: {{ complaint.citizen_email }} {% if complaint.citizen_phone %}| {{ complaint.citizen_phone }}{% endif %}
+                </div>
+            </div>
+
+            <!-- Visual Evidence & Verification Showcase -->
+            {% if complaint.image_path or (complaint.status == 'Resolved' and complaint.resolution_image_path) %}
+            <div class="glass-card no-hover">
+                <h3 style="margin-bottom: 1rem; font-weight: 600;">📸 Visual Evidence & Verification</h3>
+                
+                {% if complaint.status == 'Resolved' %}
+                <div class="resolution-showcase">
+                    <!-- Original Image -->
+                    <div class="showcase-image-wrapper">
+                        {% if complaint.image_path %}
+                            <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo">
+                        {% else %}
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: rgba(0,0,0,0.02); border: 1px dashed var(--bg-card-border); color: var(--text-muted); font-size: 0.9rem;">
+                                No issue photo provided.
+                            </div>
+                        {% endif %}
+                        <div class="showcase-label">Original Issue Photo</div>
+                    </div>
+                    
+                    <!-- Resolution Proof Image -->
+                    <div class="showcase-image-wrapper">
+                        {% if complaint.resolution_image_path %}
+                            <img src="{{ url_for('static', filename='uploads/' + complaint.resolution_image_path) }}" alt="Resolution Proof Photo">
+                        {% else %}
+                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--warning-light); color: var(--warning); font-size: 0.9rem; font-weight: 500;">
+                                Proof image pending
+                            </div>
+                        {% endif %}
+                        <div class="showcase-label" style="background: rgba(16, 185, 129, 0.95);">Official Resolution Proof</div>
+                    </div>
+                </div>
+                {% else %}
+                    <!-- Single Image Display for Pending / In Progress -->
+                    {% if complaint.image_path %}
+                    <div class="showcase-image-wrapper" style="height: 350px;">
+                        <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo">
+                        <div class="showcase-label">Citizen Issue Photo</div>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Feedback Details (For citizen and admin to see feedback rating) -->
+            {% if feedback %}
+            <div class="glass-card no-hover" style="border-color: var(--success); background: var(--success-light);">
+                <h3 style="color: var(--success); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                    ⭐ Citizen Satisfaction Rating
+                </h3>
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--warning);">
+                    {% for i in range(feedback.rating) %}★{% endfor %}{% for i in range(5 - feedback.rating) %}☆{% endfor %}
+                    <span style="font-size: 1rem; color: var(--text-primary); font-weight: 600; margin-left: 0.5rem;">({{ feedback.rating }} / 5)</span>
+                </div>
+                {% if feedback.comments %}
+                <p style="color: var(--text-secondary); font-style: italic; line-height: 1.4;">
+                    "{{ feedback.comments }}"
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Feedback Submission Panel (Only for complaint filer when resolved & no feedback exists) -->
+            {% if complaint.status == 'Resolved' and not feedback and session.get('role') == 'citizen' and session.get('user_id') == complaint.citizen_id %}
+            <div class="glass-card no-hover" style="border-color: var(--primary-glow);">
+                <h3 style="margin-bottom: 0.5rem; font-weight: 600;">Rate Resolution Quality</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Please rate your satisfaction with the action taken by the municipal authority.
+                </p>
+                
+                <form action="/complaint/{{ complaint.id }}/feedback" method="POST">
+                    <div class="form-group">
+                        <label>Satisfaction Score</label>
+                        <div class="rating-selector">
+                            <input type="radio" id="star5" name="rating" value="5" required><label for="star5" title="5 stars">★</label>
+                            <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars">★</label>
+                            <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars">★</label>
+                            <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars">★</label>
+                            <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star">★</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="feedback-comments">Grievance Feedback / Review</label>
+                        <textarea id="feedback-comments" name="comments" class="form-control" rows="3" placeholder="Tell us if you are satisfied with this resolution..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Feedback</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Timeline & Comments -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- Admin Controls Panel -->
+            {% if session.get('role') == 'admin' %}
+            <div class="glass-card no-hover" style="border-color: var(--primary-glow);">
+                <h3 style="margin-bottom: 1rem; font-weight: 600; color: var(--primary);">🛠️ Administrator Actions</h3>
+                
+                <form action="/complaint/{{ complaint.id }}/action" method="POST" enctype="multipart/form-data">
+                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 0;">
+                        <div class="form-group">
+                            <label for="admin-status-select">Update Status</label>
+                            <select id="admin-status-select" name="status" class="form-control" required>
+                                <option value="Pending" {% if complaint.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                <option value="Under Review" {% if complaint.status == 'Under Review' %}selected{% endif %}>Under Review</option>
+                                <option value="In Progress" {% if complaint.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                <option value="Resolved" {% if complaint.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                                <option value="Rejected" {% if complaint.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="department">Assign Department</label>
+                            <input type="text" id="department" name="department" class="form-control" placeholder="e.g. Sanitation, Roads" value="{{ complaint.department or '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Proof Upload Form Group: Toggled dynamically in JS when 'Resolved' is chosen -->
+                    <div class="form-group" id="resolution-proof-group" style="display: none; margin-bottom: 1.5rem;">
+                        <label style="color: var(--danger); font-weight: 600;">📸 Upload Resolution Proof Image (Required)</label>
+                        <div class="file-upload-wrapper" style="border-color: var(--danger-light); padding: 1.5rem;">
+                            <div class="upload-placeholder">
+                                <div class="upload-icon" style="color: var(--danger);">📷</div>
+                                <p style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">Select image proof</p>
+                                <p style="font-size: 0.75rem; color: var(--text-muted);">Snap photo of completed resolution (Pothole covered, etc.)</p>
+                            </div>
+                            <input type="file" name="resolution_proof" class="file-upload-input" accept="image/*" id="resolution_proof">
+                            <img src="" alt="Proof Preview" class="image-preview">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="action-message">Official Update Note / Message</label>
+                        <textarea id="action-message" name="message" class="form-control" rows="3" placeholder="Provide details about the status change or assignment notes (this will be added to the public timeline)..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Apply Updates</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Interactive Timeline & Discussion Thread -->
+            <div class="glass-card no-hover" style="display: flex; flex-direction: column; height: 100%;">
+                <h3 style="margin-bottom: 1.5rem; font-weight: 600;">💬 Timeline & Discussion</h3>
+                
+                <!-- Comment Chat List -->
+                <div class="comments-container" id="comments-box">
+                    {% for update in updates %}
+                        <div class="comment-bubble {% if update.author_role == 'admin' %}admin{% else %}citizen{% endif %}">
+                            <div class="comment-meta">
+                                <span>{{ update.author_name }}</span>
+                                <span style="font-size: 0.75rem; font-weight: normal; opacity: 0.8;">({{ update.author_role }})</span>
+                                <span style="font-weight: normal; margin-left: auto; font-size: 0.75rem;">{{ update.created_at[11:16] }}</span>
+                            </div>
+                            
+                            <!-- Highlight status updates on timeline inside chat if they exist -->
+                            {% if update.status_from or update.status_to %}
+                                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem; color: var(--primary);">
+                                    {% if update.status_from %}
+                                        Status changed: <span style="text-decoration: line-through; opacity: 0.7;">{{ update.status_from }}</span> &rarr; <strong>{{ update.status_to }}</strong>
+                                    {% else %}
+                                        Status initialized: <strong>{{ update.status_to }}</strong>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            {% if update.message %}
+                                <p class="comment-text">{{ update.message }}</p>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 2rem 0;">
+                            No updates or discussions yet.
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Add Comment Form -->
+                {% if session.get('user_id') %}
+                <form action="/complaint/{{ complaint.id }}/comment" method="POST" style="margin-top: auto;">
+                    <div style="display: flex; gap: 0.75rem;">
+                        <input type="text" name="comment" class="form-control" placeholder="Ask a question or provide details..." required autocomplete="off" style="flex: 1;">
+                        <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.25rem;">Send</button>
+                    </div>
+                </form>
+                {% else %}
+                <p style="text-align: center; font-size: 0.9rem; color: var(--text-muted);">
+                    Please <a href="/login">log in</a> to post a comment.
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Historical Status Timeline Node Indicator -->
+            <div class="glass-card no-hover">
+                <h3 style="margin-bottom: 1rem; font-weight: 600;">📈 Life Cycle Steps</h3>
+                
+                <ul class="timeline">
+                    <li class="timeline-item completed">
+                        <div class="timeline-icon"></div>
+                        <div class="timeline-content">
+                            <h4 style="font-size: 0.95rem; font-weight: 600;">Complaint Filed</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Grievance documented and registered in SQLite database.</p>
+                        </div>
+                    </li>
+                    
+                    <li class="timeline-item {% if complaint.status in ['Under Review', 'In Progress', 'Resolved'] %}completed{% elif complaint.status == 'Pending' %}active{% endif %}">
+                        <div class="timeline-icon"></div>
+                        <div class="timeline-content">
+                            <h4 style="font-size: 0.95rem; font-weight: 600;">Under Review</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Officials examine details, assign departments, and check validity.</p>
+                        </div>
+                    </li>
+
+                    <li class="timeline-item {% if complaint.status in ['In Progress', 'Resolved'] %}completed{% elif complaint.status == 'Under Review' %}active{% endif %}">
+                        <div class="timeline-icon"></div>
+                        <div class="timeline-content">
+                            <h4 style="font-size: 0.95rem; font-weight: 600;">In Progress</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Municipal workers are dispatched and repairs are scheduled.</p>
+                        </div>
+                    </li>
+
+                    <li class="timeline-item {% if complaint.status == 'Resolved' %}completed{% elif complaint.status == 'In Progress' %}active{% endif %}">
+                        <div class="timeline-icon"></div>
+                        <div class="timeline-content">
+                            <h4 style="font-size: 0.95rem; font-weight: 600;">Resolved</h4>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Repairs complete, verification proof photo uploaded for inspection.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Automatically scroll discussion/chat box to the bottom on load
+    const commentsBox = document.getElementById('comments-box');
+    if (commentsBox) {
+        commentsBox.scrollTop = commentsBox.scrollHeight;
+    }
+</script>
+{% endblock %}

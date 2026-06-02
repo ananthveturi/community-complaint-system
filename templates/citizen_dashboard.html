@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Citizen Dashboard - CivicConnect{% endblock %}
+
+{% block content %}
+<div class="glass-container">
+    <!-- Header -->
+    <div class="flex-row-between" style="margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-weight: 700;">My Dashboard</h1>
+            <p style="color: var(--text-secondary);">Manage, track, and update your submitted grievances</p>
+        </div>
+        <a href="/file-complaint" class="btn btn-primary" id="btn-file-new">📝 File New Complaint</a>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="stats-summary" style="margin-bottom: 3rem;">
+        <div class="stat-card">
+            <span class="stat-lbl">Total Filed</span>
+            <div class="stat-val" style="color: var(--primary);">{{ complaints|length }}</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-lbl">Pending & In Progress</span>
+            <div class="stat-val" style="color: var(--warning);">
+                {{ complaints|selectattr('status', 'ne', 'Resolved')|selectattr('status', 'ne', 'Rejected')|list|length }}
+            </div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-lbl">Resolved Issues</span>
+            <div class="stat-val" style="color: var(--success);">
+                {{ complaints|selectattr('status', 'equalto', 'Resolved')|list|length }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Complaints Grid -->
+    <h2 style="margin-bottom: 1.5rem; font-weight: 600;">My Submissions</h2>
+    
+    {% if complaints %}
+        <div class="grid-2">
+            {% for complaint in complaints %}
+                <div class="glass-card" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div class="flex-row-between" style="margin-bottom: 1rem; align-items: flex-start; gap: 0.5rem;">
+                            <span class="badge badge-{{ 'pending' if complaint.status == 'Pending' else 'review' if complaint.status == 'Under Review' else 'progress' if complaint.status == 'In Progress' else 'resolved' if complaint.status == 'Resolved' else 'rejected' }}">
+                                {{ complaint.status }}
+                            </span>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">
+                                Filed: {{ complaint.created_at[:10] }}
+                            </span>
+                        </div>
+                        
+                        <h3 style="font-size: 1.25rem; margin-bottom: 0.75rem; font-weight: 600;">{{ complaint.title }}</h3>
+                        
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.85rem; background: var(--bg-primary); padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
+                                📂 {{ complaint.category }}
+                            </span>
+                            <span style="font-size: 0.85rem; background: var(--bg-primary); padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
+                                📍 {{ complaint.location }}
+                            </span>
+                            {% if complaint.department %}
+                            <span style="font-size: 0.85rem; background: var(--primary-light); color: var(--primary); padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm); font-weight: 500;">
+                                🏢 {{ complaint.department }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                            {{ complaint.description }}
+                        </p>
+                    </div>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--bg-card-border); padding-top: 1rem; margin-top: auto;">
+                        <!-- If resolved and has proof of resolution, show small prompt -->
+                        {% if complaint.status == 'Resolved' %}
+                            <span style="font-size: 0.85rem; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 4px;">
+                                📸 Proof Uploaded
+                            </span>
+                        {% else %}
+                            <span></span>
+                        {% endif %}
+                        <a href="/complaint/{{ complaint.id }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">View Details & Timeline &rarr;</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="glass-card no-hover" style="text-align: center; padding: 4rem 2rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+            <h3 style="margin-bottom: 0.5rem; font-weight: 600;">No complaints submitted yet</h3>
+            <p style="color: var(--text-secondary); max-width: 450px; margin: 0 auto 2rem auto; line-height: 1.5;">
+                Your dashboard is empty. If you notice potholes, sanitation concerns, broken streetlights, or other public issues, let us know!
+            </p>
+            <a href="/file-complaint" class="btn btn-primary">📝 Submit Your First Complaint</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

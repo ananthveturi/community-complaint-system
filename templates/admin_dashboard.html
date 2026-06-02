@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Control Panel - CivicConnect{% endblock %}
+
+{% block content %}
+<div class="glass-container" id="admin-charts-container">
+    <!-- Header -->
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-weight: 700;">Admin Control Panel</h1>
+        <p style="color: var(--text-secondary);">Municipal statistics, analytical charts, and complaint assignment workflow</p>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="stats-summary" style="margin-bottom: 2.5rem;">
+        <div class="stat-card">
+            <span class="stat-lbl">Total Registered</span>
+            <div class="stat-val" style="color: var(--primary);">{{ stats.total_complaints }}</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-lbl">Unresolved (Active)</span>
+            <div class="stat-val" style="color: var(--warning);">
+                {{ stats.status_counts.Pending + stats.status_counts['Under Review'] + stats.status_counts['In Progress'] }}
+            </div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-lbl">Resolved Issues</span>
+            <div class="stat-val" style="color: var(--success);">{{ stats.status_counts.Resolved }}</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-lbl">Avg Resolution</span>
+            <div class="stat-val" style="color: var(--info); font-size: 1.6rem; padding: 0.3rem 0;">{{ stats.avg_resolution_time }}</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-lbl">Satisfaction Index</span>
+            <div class="stat-val" style="color: #f59e0b; font-size: 1.6rem; padding: 0.3rem 0;">
+                {{ stats.avg_feedback_rating }} {% if stats.avg_feedback_rating is number %}★{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="admin-charts-grid">
+        <div class="glass-card no-hover">
+            <h3 style="margin-bottom: 1.5rem; font-weight: 600; text-align: center;">Grievances by Category</h3>
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="glass-card no-hover">
+            <h3 style="margin-bottom: 1.5rem; font-weight: 600; text-align: center;">Grievance Lifecycle Volume</h3>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Panel -->
+    <div class="glass-card no-hover" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; font-weight: 600;">🔍 Filter & Search Complaints</h3>
+        
+        <form action="/admin/dashboard" method="GET" class="admin-filters">
+            <div style="flex: 1; min-width: 180px;">
+                <label for="filter-status" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Status</label>
+                <select id="filter-status" name="status" class="form-control" style="padding: 0.5rem 0.75rem;">
+                    <option value="">All Statuses</option>
+                    <option value="Pending" {% if active_filters.status == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Under Review" {% if active_filters.status == 'Under Review' %}selected{% endif %}>Under Review</option>
+                    <option value="In Progress" {% if active_filters.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Resolved" {% if active_filters.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                    <option value="Rejected" {% if active_filters.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            
+            <div style="flex: 1; min-width: 180px;">
+                <label for="filter-category" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Category</label>
+                <select id="filter-category" name="category" class="form-control" style="padding: 0.5rem 0.75rem;">
+                    <option value="">All Categories</option>
+                    <option value="Roads & Traffic" {% if active_filters.category == 'Roads & Traffic' %}selected{% endif %}>Roads & Traffic</option>
+                    <option value="Sanitation & Waste" {% if active_filters.category == 'Sanitation & Waste' %}selected{% endif %}>Sanitation & Waste</option>
+                    <option value="Water Supply" {% if active_filters.category == 'Water Supply' %}selected{% endif %}>Water Supply</option>
+                    <option value="Electricity & Power" {% if active_filters.category == 'Electricity & Power' %}selected{% endif %}>Electricity & Power</option>
+                    <option value="Public Safety" {% if active_filters.category == 'Public Safety' %}selected{% endif %}>Public Safety</option>
+                    <option value="Parks & Recreation" {% if active_filters.category == 'Parks & Recreation' %}selected{% endif %}>Parks & Recreation</option>
+                    <option value="Other" {% if active_filters.category == 'Other' %}selected{% endif %}>Other Issues</option>
+                </select>
+            </div>
+
+            <div style="flex: 1; min-width: 180px;">
+                <label for="filter-dept" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Assigned Dept</label>
+                <input type="text" id="filter-dept" name="department" class="form-control" style="padding: 0.5rem 0.75rem;" placeholder="e.g. Roads, Sanitation" value="{{ active_filters.department or '' }}">
+            </div>
+
+            <div style="flex: 2; min-width: 250px;">
+                <label for="filter-search" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Search Keywords</label>
+                <input type="text" id="filter-search" name="search" class="form-control" style="padding: 0.5rem 0.75rem;" placeholder="Search title, description, location, citizen name..." value="{{ active_filters.search or '' }}">
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem;">Apply Filters</button>
+                <a href="/admin/dashboard" class="btn btn-secondary" style="padding: 0.6rem 1.2rem;">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabs Header -->
+    <div class="tabs-header" style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--bg-card-border); padding-bottom: 0.75rem;">
+        <button class="btn btn-secondary" id="tab-btn-complaints" onclick="switchAdminTab('complaints')" style="border-radius: var(--border-radius-sm); font-size: 0.95rem; padding: 0.5rem 1.25rem; background: var(--primary-light); color: var(--primary); border-color: var(--primary-glow);">📋 Complaints Register ({{ complaints|length }})</button>
+        <button class="btn btn-secondary" id="tab-btn-users" onclick="switchAdminTab('users')" style="border-radius: var(--border-radius-sm); font-size: 0.95rem; padding: 0.5rem 1.25rem;">👥 Registered Accounts ({{ users|length }})</button>
+    </div>
+
+    <!-- Tab 1: Complaints Register -->
+    <div id="tab-content-complaints" class="admin-tab-content">
+        <!-- Complaints Listing -->
+        <div class="glass-card no-hover" style="padding: 1.5rem;">
+            <h3 style="margin-bottom: 1rem; font-weight: 600;">Complaints Register ({{ complaints|length }} results)</h3>
+            
+            {% if complaints %}
+                <div class="table-wrapper">
+                    <table class="glass-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Citizen</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Location</th>
+                                <th>Assigned Dept</th>
+                                <th>Status</th>
+                                <th>Filed Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for complaint in complaints %}
+                                <tr>
+                                    <td style="font-weight: 600;">#{{ complaint.id }}</td>
+                                    <td>{{ complaint.citizen_name }}</td>
+                                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        <strong>{{ complaint.title }}</strong>
+                                    </td>
+                                    <td>{{ complaint.category }}</td>
+                                    <td>{{ complaint.location }}</td>
+                                    <td>
+                                        {% if complaint.department %}
+                                            <span style="font-size: 0.85rem; font-weight: 500; color: var(--primary);">{{ complaint.department }}</span>
+                                        {% else %}
+                                            <span style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{{ 'pending' if complaint.status == 'Pending' else 'review' if complaint.status == 'Under Review' else 'progress' if complaint.status == 'In Progress' else 'resolved' if complaint.status == 'Resolved' else 'rejected' }}" style="font-size: 0.75rem;">
+                                            {{ complaint.status }}
+                                        </span>
+                                    </td>
+                                    <td style="font-size: 0.85rem; color: var(--text-muted);">{{ complaint.created_at[:10] }}</td>
+                                    <td>
+                                        <a href="/complaint/{{ complaint.id }}" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: var(--border-radius-sm);">Manage</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div style="text-align: center; color: var(--text-muted); padding: 3rem 0;">
+                    No complaints matching filters found.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tab 2: Registered Accounts -->
+    <div id="tab-content-users" class="admin-tab-content" style="display: none;">
+        <!-- Registered Users Listing -->
+        <div class="glass-card no-hover" style="padding: 1.5rem;">
+            <h3 style="margin-bottom: 1rem; font-weight: 600;">Registered Citizen & Staff Accounts</h3>
+            
+            {% if users %}
+                <div class="table-wrapper">
+                    <table class="glass-table">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Full Name</th>
+                                <th>Username</th>
+                                <th>Email Address</th>
+                                <th>Phone Number</th>
+                                <th>Access Role</th>
+                                <th>Registration Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users %}
+                                <tr>
+                                    <td style="font-weight: 600;">#{{ u.id }}</td>
+                                    <td><strong>{{ u.full_name }}</strong></td>
+                                    <td><code>{{ u.username }}</code></td>
+                                    <td>{{ u.email }}</td>
+                                    <td>{{ u.phone or '--' }}</td>
+                                    <td>
+                                        <span class="badge badge-{{ 'resolved' if u.role == 'admin' else 'progress' }}" style="font-size: 0.75rem;">
+                                            {{ u.role }}
+                                        </span>
+                                    </td>
+                                    <td style="font-size: 0.85rem; color: var(--text-muted);">{{ u.created_at[:10] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div style="text-align: center; color: var(--text-muted); padding: 3rem 0;">
+                    No user accounts found.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Include Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+    function switchAdminTab(tab) {
+        // Toggle Active Content Panel
+        document.getElementById('tab-content-complaints').style.display = tab === 'complaints' ? 'block' : 'none';
+        document.getElementById('tab-content-users').style.display = tab === 'users' ? 'block' : 'none';
+        
+        // Toggle Active Button Styling
+        const compBtn = document.getElementById('tab-btn-complaints');
+        const userBtn = document.getElementById('tab-btn-users');
+        
+        if (tab === 'complaints') {
+            compBtn.style.background = 'var(--primary-light)';
+            compBtn.style.color = 'var(--primary)';
+            compBtn.style.borderColor = 'var(--primary-glow)';
+            
+            userBtn.style.background = 'var(--bg-card-border)';
+            userBtn.style.color = 'var(--text-primary)';
+            userBtn.style.borderColor = 'var(--bg-card-border)';
+        } else {
+            userBtn.style.background = 'var(--primary-light)';
+            userBtn.style.color = 'var(--primary)';
+            userBtn.style.borderColor = 'var(--primary-glow)';
+            
+            compBtn.style.background = 'var(--bg-card-border)';
+            compBtn.style.color = 'var(--text-primary)';
+            compBtn.style.borderColor = 'var(--bg-card-border)';
+        }
+    }
+</script>
+{% endblock %}

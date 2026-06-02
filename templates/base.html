@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CivicConnect - Community Complaint System{% endblock %}</title>
+    
+    <!-- Meta details for SEO -->
+    <meta name="description" content="A digital system to file, track and manage community complaints efficiently for better civic responsiveness.">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Inline script to block render flash and initialize correct theme early -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" id="main-navbar">
+        <div class="navbar-container">
+            <a href="/" class="logo" id="nav-logo">
+                <span class="logo-icon">🏢</span> CivicConnect
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="/" id="nav-home">Home</a></li>
+                {% if session.get('user_id') %}
+                    {% if session.get('role') == 'admin' %}
+                        <li><a href="/admin/dashboard" id="nav-admin-dashboard" class="{% if request.path == '/admin/dashboard' %}active{% endif %}">Admin Control</a></li>
+                    {% else %}
+                        <li><a href="/dashboard" id="nav-citizen-dashboard" class="{% if request.path == '/dashboard' %}active{% endif %}">My Dashboard</a></li>
+                        <li><a href="/file-complaint" id="nav-file-complaint" class="{% if request.path == '/file-complaint' %}active{% endif %}">File Complaint</a></li>
+                    {% endif %}
+                    <li><a href="/logout" id="nav-logout">Logout</a></li>
+                    <li style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">
+                        Hi, <strong>{{ session.get('full_name') }}</strong> ({{ session.get('role') }})
+                    </li>
+                {% else %}
+                    <li><a href="/login" id="nav-login" class="{% if request.path == '/login' %}active{% endif %}">Login</a></li>
+                    <li><a href="/register" id="nav-register" class="{% if request.path == '/register' %}active{% endif %}">Register</a></li>
+                {% endif %}
+                <li>
+                    <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle dark/light theme" type="button">
+                        🌙
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert-container" id="system-alerts">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }}" role="alert">
+                        <span>{{ message }}</span>
+                        <button class="alert-close" aria-label="Close message">&times;</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content Block -->
+    <main style="flex: 1;">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer id="app-footer">
+        <p>&copy; 2026 <a href="/">CivicConnect</a>. All rights reserved. Empowering citizen voice and transparency.</p>
+    </footer>
+
+    <!-- Shared JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
