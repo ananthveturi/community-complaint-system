@@ -71,7 +71,7 @@
                     <!-- Original Image -->
                     <div class="showcase-image-wrapper">
                         {% if complaint.image_path %}
-                            <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo">
+                            <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo" onerror="this.style.display='none';">
                         {% else %}
                             <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: rgba(0,0,0,0.02); border: 1px dashed var(--bg-card-border); color: var(--text-muted); font-size: 0.9rem;">
                                 No issue photo provided.
@@ -83,7 +83,7 @@
                     <!-- Resolution Proof Image -->
                     <div class="showcase-image-wrapper">
                         {% if complaint.resolution_image_path %}
-                            <img src="{{ url_for('static', filename='uploads/' + complaint.resolution_image_path) }}" alt="Resolution Proof Photo">
+                            <img src="{{ url_for('static', filename='uploads/' + complaint.resolution_image_path) }}" alt="Resolution Proof Photo" onerror="this.style.display='none';">
                         {% else %}
                             <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--warning-light); color: var(--warning); font-size: 0.9rem; font-weight: 500;">
                                 Proof image pending
@@ -96,7 +96,7 @@
                     <!-- Single Image Display for Pending / In Progress -->
                     {% if complaint.image_path %}
                     <div class="showcase-image-wrapper" style="height: 350px;">
-                        <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo">
+                        <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo" onerror="this.style.display='none';">
                         <div class="showcase-label">Citizen Issue Photo</div>
                     </div>
                     {% endif %}
@@ -190,7 +190,7 @@
                                 <p style="font-size: 0.75rem; color: var(--text-muted);">Snap photo of completed resolution (Pothole covered, etc.)</p>
                             </div>
                             <input type="file" name="resolution_proof" class="file-upload-input" accept="image/*" id="resolution_proof">
-                            <img src="" alt="Proof Preview" class="image-preview">
+                            <img src="" alt="Selected Preview" class="image-preview" onerror="this.style.display='none';">
                         </div>
                     </div>
 
