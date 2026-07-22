@@ -1,83 +1,170 @@
 {% extends "base.html" %}
 
-{% block title %}CCMS - Digital Community Complaint Resolution Platform{% endblock %}
+{% block title %}CCMS - {{ _('landing_title') }}{% endblock %}
 
 {% block content %}
-<div class="glass-container">
-    <!-- Hero Section -->
-    <section class="hero-section">
-        <h1 class="hero-title" id="landing-title">Empowering Communities, Resolving Concerns</h1>
-        <p class="hero-subtitle">
-            Say goodbye to paper forms, long queues, and unanswered emails. File your grievances online, monitor status updates in real-time, and get visual verification once issues are resolved.
-        </p>
-        <div class="hero-buttons">
-            {% if session.get('user_id') %}
-                {% if session.get('role') == 'admin' %}
-                    <a href="/admin/dashboard" class="btn btn-primary" id="hero-admin-btn">Access Admin Control panel</a>
-                {% else %}
-                    <a href="/file-complaint" class="btn btn-primary" id="hero-file-btn">📝 File a Complaint</a>
-                    <a href="/dashboard" class="btn btn-secondary" id="hero-dash-btn">View My Dashboard</a>
-                {% endif %}
-            {% else %}
-                <a href="/register" class="btn btn-primary" id="hero-register-btn">Get Started</a>
-                <a href="/login" class="btn btn-secondary" id="hero-login-btn">Citizen & Admin Login</a>
-            {% endif %}
-        </div>
-    </section>
+<div class="relative overflow-hidden min-h-[calc(100vh-4rem)]" style="background:var(--bg-body);">
+    <!-- Aura Glow Blobs -->
+    <div class="aura-violet" style="top:-80px;right:-60px;"></div>
+    <div class="aura-cyan" style="bottom:40px;left:-40px;"></div>
+    <div class="aura-pink" style="top:50%;right:20%;"></div>
+    <div class="aura-yellow" style="bottom:-40px;right:30%;"></div>
 
-    <!-- Stats Banner -->
-    <div class="stats-summary" style="margin-bottom: 4rem;">
-        <div class="stat-card">
-            <span class="stat-val" style="color: var(--success);">94.8%</span>
-            <span class="stat-lbl">Resolution Rate</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-val" style="color: var(--info);">36 Hrs</span>
-            <span class="stat-lbl">Average Response Time</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-val" style="color: var(--primary);">4.8 ★</span>
-            <span class="stat-lbl">Citizen Satisfaction</span>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            
+            <!-- Hero Content -->
+            <div class="max-w-2xl animate-fade-in-up">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-sm font-semibold mb-6" style="background:rgba(139,92,246,0.08);border-color:rgba(139,92,246,0.20);color:#8B5CF6;">
+                    <span class="flex h-2 w-2 rounded-full bg-brand-violet animate-pulse"></span>
+                    {{ _('verified_resolved') }}
+                </div>
+                
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.1] mb-6" style="color:var(--text-primary);">
+                    <span class="text-gradient">{{ _('landing_title') }}</span>
+                </h1>
+                
+                <p class="text-lg mb-8 leading-relaxed max-w-xl" style="color:var(--text-secondary);">
+                    {{ _('landing_subtitle') }}
+                </p>
+                
+                <div class="flex flex-wrap items-center gap-4">
+                    {% if session.get('user_id') %}
+                        {% if session.get('role') == 'admin' %}
+                            <a href="/admin/dashboard" class="px-6 py-3 rounded-xl text-white font-medium btn-brand flex items-center gap-2">
+                                {{ _('view_command_center') }} <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </a>
+                        {% else %}
+                            <a href="/file-complaint" class="px-6 py-3 rounded-xl text-white font-medium btn-brand flex items-center gap-2">
+                                {{ _('file_complaint_btn') }} <i data-lucide="plus" class="w-4 h-4"></i>
+                            </a>
+                            <a href="/dashboard" class="px-6 py-3 rounded-xl font-medium border transition-all hover:border-primary" style="background:var(--bg-card);color:var(--text-secondary);border-color:var(--border);">
+                                {{ _('my_complaints') }}
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <a href="/register" class="px-6 py-3 rounded-xl text-white font-medium btn-brand flex items-center gap-2 hover:-translate-y-0.5 duration-200">
+                            {{ _('create_account') }} <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </a>
+                        <a href="/login" class="px-6 py-3 rounded-xl font-medium border transition-all hover:border-primary" style="background:var(--bg-card);color:var(--text-secondary);border-color:var(--border);">
+                            {{ _('login') }}
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Hero Visual / Mockup Card -->
+            <div class="relative w-full max-w-lg mx-auto lg:mx-0 lg:max-w-none animate-fade-in-up" style="animation-delay:0.15s;">
+                <!-- Glow behind card -->
+                <div class="absolute -inset-2 bg-gradient-to-br from-brand-violet/20 via-brand-cyan/10 to-brand-pink/15 rounded-3xl blur-xl opacity-60"></div>
+                <div class="relative rounded-2xl border overflow-hidden" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+                    
+                    <!-- Decorative header -->
+                    <div class="flex items-center justify-between p-6 pb-4 border-b" style="border-color:var(--border);">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold" style="color:var(--text-primary);">{{ _('ai_classification') }}</h3>
+                                <p class="text-xs" style="color:var(--text-muted);">Live Preview</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-900/30 text-danger text-xs font-medium border border-red-100 dark:border-red-800/30">
+                            <span class="w-1.5 h-1.5 rounded-full bg-danger animate-pulse"></span> {{ _('priority') }}: High
+                        </span>
+                    </div>
+
+                    <!-- Mock Issue Card -->
+                    <div class="p-6">
+                        <div class="rounded-xl border p-5 mb-6 group hover:border-primary/40 transition-all" style="background:var(--bg-input);border-color:var(--border);">
+                            <h4 class="text-lg font-bold mb-2 group-hover:text-primary transition-colors" style="color:var(--text-primary);">Streetlight outage near school gate</h4>
+                            <p class="text-sm mb-4 line-clamp-2" style="color:var(--text-secondary);">Electricity & Power. Verified safety hazard for evening students.</p>
+                            
+                            <!-- Timeline Mock -->
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="h-2 w-full bg-brand-violet rounded-full"></div>
+                                <div class="h-2 w-full bg-brand-cyan rounded-full"></div>
+                                <div class="h-2 w-full bg-brand-pink rounded-full ring-4 ring-brand-pink/20"></div>
+                                <div class="h-2 w-full rounded-full" style="background:var(--border);"></div>
+                            </div>
+                            <div class="flex justify-between text-xs font-medium" style="color:var(--text-muted);">
+                                <span>{{ _('pending') }}</span>
+                                <span class="text-primary">{{ _('in_progress') }}</span>
+                                <span>{{ _('resolved') }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Mock Stats -->
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div class="text-2xl font-extrabold" style="color:var(--text-primary);">{{ stats.total_complaints }}</div>
+                                <div class="text-xs font-medium" style="color:var(--text-muted);">{{ _('total_filed') }}</div>
+                            </div>
+                            <div class="border-x" style="border-color:var(--border);">
+                                <div class="text-2xl font-extrabold" style="color:var(--text-primary);">{{ stats.status_counts.Resolved }}</div>
+                                <div class="text-xs font-medium" style="color:var(--text-muted);">{{ _('verified_resolved') }}</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-extrabold" style="color:var(--text-primary);">{{ stats.avg_resolution_time }}</div>
+                                <div class="text-xs font-medium" style="color:var(--text-muted);">{{ _('avg_closure') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- Core Features Grid -->
-    <h2 style="text-align: center; margin-bottom: 2rem; font-weight: 700;">How CivicConnect Works</h2>
-    <div class="grid-3" style="margin-bottom: 3rem;">
-        <div class="glass-card text-center feature-card" id="feature-submit">
-            <div class="feature-icon">📝</div>
-            <h3>1. File Instantly</h3>
-            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
-                Submit details, category, specific location, and snap a picture of the problem area.
-            </p>
-        </div>
+<!-- Features Section -->
+<div class="py-24 sm:py-32" style="background:var(--bg-card);">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div class="glass-card text-center feature-card" id="feature-track">
-            <div class="feature-icon">📈</div>
-            <h3>2. Real-Time Tracking</h3>
-            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
-                Monitor the exact status (Under Review, In Progress) and discuss with officials via integrated comments.
-            </p>
+        <div class="max-w-2xl mb-16 animate-fade-in-up">
+            <h2 class="text-base font-bold leading-7 text-primary">Differentiation</h2>
+            <p class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl" style="color:var(--text-primary);">Designed around what most portals miss</p>
+            <p class="mt-4 text-lg" style="color:var(--text-secondary);">Existing civic platforms already cover reporting, routing, and tracking. CCMS adds a stronger accountability layer: impact-aware intake, transparent service stages, and proof-based closure.</p>
         </div>
 
-        <div class="glass-card text-center feature-card" id="feature-verify">
-            <div class="feature-icon">📸</div>
-            <h3>3. Visual Verification</h3>
-            <p style="color: var(--text-secondary); margin-top: 0.5rem;">
-                Administrators must upload a photo of the completed solution as proof of work before resolution.
-            </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Feature 1 -->
+            <div class="relative p-7 rounded-2xl border hover:shadow-glow hover:-translate-y-1 transition-all duration-300 group" style="background:var(--bg-body);border-color:var(--border);">
+                <div class="w-12 h-12 rounded-xl bg-brand-violet/10 flex items-center justify-center text-brand-violet mb-5 group-hover:scale-110 transition-transform">
+                    <i data-lucide="target" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2" style="color:var(--text-primary);">Impact-first intake</h3>
+                <p class="text-sm leading-relaxed" style="color:var(--text-secondary);">Complaint forms guide citizens to explain location, urgency, public risk, and affected people so admins can triage better.</p>
+            </div>
+            
+            <!-- Feature 2 -->
+            <div class="relative p-7 rounded-2xl border hover:shadow-glow-cyan hover:-translate-y-1 transition-all duration-300 group" style="background:var(--bg-body);border-color:var(--border);">
+                <div class="w-12 h-12 rounded-xl bg-brand-cyan/10 flex items-center justify-center text-brand-cyan mb-5 group-hover:scale-110 transition-transform">
+                    <i data-lucide="git-commit" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2" style="color:var(--text-primary);">Trust ledger</h3>
+                <p class="text-sm leading-relaxed" style="color:var(--text-secondary);">Every status change, official note, citizen comment, and resolution proof stays visible in one unified timeline.</p>
+            </div>
+            
+            <!-- Feature 3 -->
+            <div class="relative p-7 rounded-2xl border hover:shadow-glow-pink hover:-translate-y-1 transition-all duration-300 group" style="background:var(--bg-body);border-color:var(--border);">
+                <div class="w-12 h-12 rounded-xl bg-brand-pink/10 flex items-center justify-center text-brand-pink mb-5 group-hover:scale-110 transition-transform">
+                    <i data-lucide="check-circle" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2" style="color:var(--text-primary);">Closure evidence</h3>
+                <p class="text-sm leading-relaxed" style="color:var(--text-secondary);">A case cannot be marked resolved unless the administrator uploads a definitive proof image of the completed work.</p>
+            </div>
+            
+            <!-- Feature 4 -->
+            <div class="relative p-7 rounded-2xl border hover:shadow-soft hover:-translate-y-1 transition-all duration-300 group" style="background:var(--bg-body);border-color:var(--border);">
+                <div class="w-12 h-12 rounded-xl bg-brand-yellow/10 flex items-center justify-center text-brand-yellow mb-5 group-hover:scale-110 transition-transform">
+                    <i data-lucide="bar-chart-2" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-2" style="color:var(--text-primary);">Service learning</h3>
+                <p class="text-sm leading-relaxed" style="color:var(--text-secondary);">Dashboard analytics show categories, status volumes, resolution time, and citizen satisfaction metrics to improve operations.</p>
+            </div>
         </div>
-    </div>
 
-    <!-- Info Section with Callout -->
-    <div class="glass-card no-hover" style="background: var(--primary-light); border-color: rgba(99, 102, 241, 0.2); padding: 3rem; text-align: center;">
-        <h2 style="color: var(--primary); margin-bottom: 1rem;">Looking for accountability?</h2>
-        <p style="max-width: 700px; margin: 0 auto 1.5rem auto; color: var(--text-secondary); line-height: 1.6;">
-            CivicConnect fosters trust through double-photo verification. Citizens submit the issue photograph, and municipal officials upload the resolved resolution photo (e.g. patched pothole, cleaned park, repaired wire) to verify compliance.
-        </p>
-        {% if not session.get('user_id') %}
-            <a href="/register" class="btn btn-primary">Create Your Citizen Account</a>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

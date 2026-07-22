@@ -1,10 +1,30 @@
 import os
 import sqlite3
+import struct
+import zlib
 from werkzeug.security import generate_password_hash
 import database
 
-# 1x1 Transparent PNG bytes to programmatically seed valid image files
-PNG_BYTES = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
+def make_png(width, height, top_rgb, bottom_rgb):
+    """Create a small visible RGB PNG without external image dependencies."""
+    rows = []
+    for y in range(height):
+        ratio = y / max(height - 1, 1)
+        r = int(top_rgb[0] * (1 - ratio) + bottom_rgb[0] * ratio)
+        g = int(top_rgb[1] * (1 - ratio) + bottom_rgb[1] * ratio)
+        b = int(top_rgb[2] * (1 - ratio) + bottom_rgb[2] * ratio)
+        rows.append(b'\x00' + bytes([r, g, b]) * width)
+    raw = b''.join(rows)
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+
+    return (
+        b'\x89PNG\r\n\x1a\n'
+        + chunk(b'IHDR', struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b'IDAT', zlib.compress(raw, 9))
+        + chunk(b'IEND', b'')
+    )
 
 def create_mock_images():
     """Create mock image files in the upload folder for demo visual proofs."""
@@ -12,20 +32,19 @@ def create_mock_images():
     os.makedirs(upload_dir, exist_ok=True)
     
     images = {
-        'mock_pothole_issue.png': PNG_BYTES,
-        'mock_pothole_fixed.png': PNG_BYTES,
-        'mock_garbage_issue.png': PNG_BYTES,
-        'mock_swing_broken.png': PNG_BYTES,
-        'mock_swing_fixed.png': PNG_BYTES,
-        'mock_streetlight_issue.png': PNG_BYTES
+        'mock_pothole_issue.png': make_png(640, 360, (92, 64, 51), (25, 25, 25)),
+        'mock_pothole_fixed.png': make_png(640, 360, (55, 94, 69), (145, 173, 112)),
+        'mock_garbage_issue.png': make_png(640, 360, (130, 92, 32), (64, 82, 42)),
+        'mock_swing_broken.png': make_png(640, 360, (99, 60, 90), (40, 52, 88)),
+        'mock_swing_fixed.png': make_png(640, 360, (32, 102, 86), (125, 179, 135)),
+        'mock_streetlight_issue.png': make_png(640, 360, (18, 24, 39), (71, 85, 105))
     }
     
     for name, data in images.items():
         path = os.path.join(upload_dir, name)
-        if not os.path.exists(path):
-            with open(path, 'wb') as f:
-                f.write(data)
-            print(f"Created mock image: {name}")
+        with open(path, 'wb') as f:
+            f.write(data)
+        print(f"Created mock image: {name}")
 
 def seed_database():
     """Wipe database, initialize schema, and populate with rich test data."""
@@ -81,6 +100,7 @@ def seed_database():
         )
     )
     complaint_1_id = cursor.lastrowid
+    cursor.execute('UPDATE complaints SET latitude = ?, longitude = ? WHERE id = ?', (40.730610, -73.935242, complaint_1_id))
     
     # Timeline updates for Complaint 1
     # Use standard sqlite datetime modifiers
@@ -122,6 +142,7 @@ def seed_database():
         )
     )
     complaint_2_id = cursor.lastrowid
+    cursor.execute('UPDATE complaints SET latitude = ?, longitude = ? WHERE id = ?', (40.782865, -73.965355, complaint_2_id))
     
     updates_2 = [
         (complaint_2_id, user_ids['jane_smith'], None, 'Pending', 'Complaint filed.', "-2 days"),
@@ -151,6 +172,7 @@ def seed_database():
         )
     )
     complaint_3_id = cursor.lastrowid
+    cursor.execute('UPDATE complaints SET latitude = ?, longitude = ? WHERE id = ?', (40.735657, -74.172367, complaint_3_id))
     cursor.execute(
         '''INSERT INTO complaint_updates (complaint_id, author_id, status_from, status_to, message, created_at)
            VALUES (?, ?, NULL, 'Pending', 'Complaint filed successfully.', datetime('now', '-6 hours'))''',
@@ -172,6 +194,7 @@ def seed_database():
         )
     )
     complaint_4_id = cursor.lastrowid
+    cursor.execute('UPDATE complaints SET latitude = ?, longitude = ? WHERE id = ?', (28.613939, 77.209023, complaint_4_id))
     updates_4 = [
         (complaint_4_id, user_ids['jane_smith'], None, 'Pending', 'Complaint filed.', "-1 day"),
         (complaint_4_id, user_ids['admin'], 'Pending', 'Under Review', 'Investigating supply pressure.', "-8 hours"),
@@ -201,6 +224,7 @@ def seed_database():
         )
     )
     complaint_5_id = cursor.lastrowid
+    cursor.execute('UPDATE complaints SET latitude = ?, longitude = ? WHERE id = ?', (40.770880, -73.974904, complaint_5_id))
     
     updates_5 = [
         (complaint_5_id, user_ids['john_doe'], None, 'Pending', 'Swings reported broken.', "-10 days"),

@@ -1,99 +1,143 @@
 {% extends "base.html" %}
 
-{% block title %}Citizen Dashboard - Community Complaint Management System {% endblock %}
+{% block title %}{{ _('my_complaints') }} - CCMS{% endblock %}
 
 {% block content %}
-<div class="glass-container">
-    <!-- Header -->
-    <div class="flex-row-between" style="margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h1 style="font-weight: 700;">My Dashboard</h1>
-            <p style="color: var(--text-secondary);">Manage, track, and update your submitted grievances</p>
-        </div>
-        <a href="/file-complaint" class="btn btn-primary" id="btn-file-new">📝 File New Complaint</a>
+<div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-extrabold tracking-tight" style="color:var(--text-primary);">{{ _('citizen_workspace') }}</h1>
+        <p class="text-sm mt-1" style="color:var(--text-muted);">{{ _('track_reported') }}</p>
     </div>
+    <a href="/file-complaint" class="inline-flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm font-semibold btn-brand focus:ring-2 focus:ring-primary/20 focus:outline-none">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        {{ _('report_new') }}
+    </a>
+</div>
 
-    <!-- Summary Metrics -->
-    <div class="stats-summary" style="margin-bottom: 3rem;">
-        <div class="stat-card">
-            <span class="stat-lbl">Total Filed</span>
-            <div class="stat-val" style="color: var(--primary);">{{ complaints|length }}</div>
-        </div>
-        <div class="stat-card">
-            <span class="stat-lbl">Pending & In Progress</span>
-            <div class="stat-val" style="color: var(--warning);">
-                {{ complaints|selectattr('status', 'ne', 'Resolved')|selectattr('status', 'ne', 'Rejected')|list|length }}
+<!-- KPI Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="rounded-2xl border p-5 kpi-violet" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-medium" style="color:var(--text-muted);">{{ _('total_filed') }}</h3>
+            <div class="w-8 h-8 rounded-lg bg-brand-violet/10 text-brand-violet flex items-center justify-center">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
             </div>
         </div>
-        <div class="stat-card">
-            <span class="stat-lbl">Resolved Issues</span>
-            <div class="stat-val" style="color: var(--success);">
-                {{ complaints|selectattr('status', 'equalto', 'Resolved')|list|length }}
+        <div class="text-3xl font-extrabold" style="color:var(--text-primary);">{{ complaints|length }}</div>
+    </div>
+    
+    <div class="rounded-2xl border p-5 kpi-yellow" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-medium" style="color:var(--text-muted);">{{ _('active_cases') }}</h3>
+            <div class="w-8 h-8 rounded-lg bg-brand-yellow/10 text-brand-yellow flex items-center justify-center">
+                <i data-lucide="activity" class="w-4 h-4"></i>
             </div>
         </div>
+        <div class="text-3xl font-extrabold" style="color:var(--text-primary);">{{ complaints|selectattr('status', 'ne', 'Resolved')|selectattr('status', 'ne', 'Rejected')|list|length }}</div>
     </div>
+    
+    <div class="rounded-2xl border p-5 kpi-green" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-medium" style="color:var(--text-muted);">{{ _('verified_resolved') }}</h3>
+            <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/20 text-success flex items-center justify-center">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            </div>
+        </div>
+        <div class="text-3xl font-extrabold" style="color:var(--text-primary);">{{ complaints|selectattr('status', 'equalto', 'Resolved')|list|length }}</div>
+    </div>
+</div>
 
-    <!-- Complaints Grid -->
-    <h2 style="margin-bottom: 1.5rem; font-weight: 600;">My Submissions</h2>
+<!-- Cases List -->
+<div>
+    <h2 class="text-lg font-bold mb-4" style="color:var(--text-primary);">{{ _('recent_complaints') }}</h2>
     
     {% if complaints %}
-        <div class="grid-2">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {% for complaint in complaints %}
-                <div class="glass-card" style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <div class="flex-row-between" style="margin-bottom: 1rem; align-items: flex-start; gap: 0.5rem;">
-                            <span class="badge badge-{{ 'pending' if complaint.status == 'Pending' else 'review' if complaint.status == 'Under Review' else 'progress' if complaint.status == 'In Progress' else 'resolved' if complaint.status == 'Resolved' else 'rejected' }}">
-                                {{ complaint.status }}
-                            </span>
-                            <span style="font-size: 0.85rem; color: var(--text-muted);">
-                                Filed: {{ complaint.created_at[:10] }}
+                {% set stage = 1 if complaint.status == 'Pending' else 2 if complaint.status == 'Under Review' else 3 if complaint.status == 'In Progress' else 4 if complaint.status == 'Resolved' else 0 %}
+                
+                <div class="rounded-2xl border p-6 hover:border-primary/30 transition-all group flex flex-col h-full" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-card);">
+                    
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border
+                                {% if complaint.status == 'Pending' %} bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/30
+                                {% elif complaint.status == 'Under Review' %} bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/30
+                                {% elif complaint.status == 'In Progress' %} bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700/30
+                                {% elif complaint.status == 'Resolved' %} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700/30
+                                {% else %} bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700/30 {% endif %}">
+                                {% if complaint.status == 'Pending' %}{{ _('pending') }}
+                                {% elif complaint.status == 'Under Review' %}{{ _('under_review') }}
+                                {% elif complaint.status == 'In Progress' %}{{ _('in_progress') }}
+                                {% elif complaint.status == 'Resolved' %}{{ _('resolved') }}
+                                {% else %}{{ _('rejected') }}{% endif %}
                             </span>
                         </div>
-                        
-                        <h3 style="font-size: 1.25rem; margin-bottom: 0.75rem; font-weight: 600;">{{ complaint.title }}</h3>
-                        
-                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                            <span style="font-size: 0.85rem; background: var(--bg-primary); padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
-                                📂 {{ complaint.category }}
-                            </span>
-                            <span style="font-size: 0.85rem; background: var(--bg-primary); padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
-                                📍 {{ complaint.location }}
-                            </span>
-                            {% if complaint.department %}
-                            <span style="font-size: 0.85rem; background: var(--primary-light); color: var(--primary); padding: 0.25rem 0.5rem; border-radius: var(--border-radius-sm); font-weight: 500;">
-                                🏢 {{ complaint.department }}
-                            </span>
-                            {% endif %}
-                        </div>
-                        
-                        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
-                            {{ complaint.description }}
-                        </p>
+                        <span class="text-xs font-medium" style="color:var(--text-muted);">{{ _('filed') }} {{ complaint.created_at[:10] }}</span>
                     </div>
 
-                    <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--bg-card-border); padding-top: 1rem; margin-top: auto;">
-                        <!-- If resolved and has proof of resolution, show small prompt -->
+                    <h3 class="text-lg font-bold mb-2 group-hover:text-primary transition-colors" style="color:var(--text-primary);">{{ complaint.title }}</h3>
+                    <p class="text-sm line-clamp-2 mb-4" style="color:var(--text-secondary);">{{ complaint.description }}</p>
+
+                    <div class="flex flex-wrap gap-2 mb-6 mt-auto">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
+                            <i data-lucide="tag" class="w-3 h-3"></i> {{ complaint.category }}
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
+                            <i data-lucide="map-pin" class="w-3 h-3"></i> {{ complaint.location }}
+                        </span>
+                        {% if complaint.department %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
+                                <i data-lucide="briefcase" class="w-3 h-3"></i> {{ complaint.department }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="mb-5">
+                        <div class="flex items-center justify-between gap-1 mb-2">
+                            <div class="h-1.5 w-full rounded-full transition-colors {% if stage >= 1 %}bg-brand-violet{% else %}bg-[var(--border)]{% endif %}"></div>
+                            <div class="h-1.5 w-full rounded-full transition-colors {% if stage >= 2 %}bg-brand-cyan{% else %}bg-[var(--border)]{% endif %}"></div>
+                            <div class="h-1.5 w-full rounded-full transition-colors {% if stage >= 3 %}bg-brand-pink{% else %}bg-[var(--border)]{% endif %}"></div>
+                            <div class="h-1.5 w-full rounded-full transition-colors {% if stage >= 4 %}bg-success{% else %}bg-[var(--border)]{% endif %}"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-semibold uppercase tracking-wider" style="color:var(--text-muted);">
+                            <span class="{% if stage >= 1 %}text-brand-violet{% endif %}">{{ _('pending') }}</span>
+                            <span class="{% if stage >= 2 %}text-brand-cyan{% endif %}">{{ _('under_review') }}</span>
+                            <span class="{% if stage >= 3 %}text-brand-pink{% endif %}">{{ _('in_progress') }}</span>
+                            <span class="{% if stage >= 4 %}text-success{% endif %}">{{ _('resolved') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t mt-auto" style="border-color:var(--border);">
                         {% if complaint.status == 'Resolved' %}
-                            <span style="font-size: 0.85rem; color: var(--success); font-weight: 500; display: flex; align-items: center; gap: 4px;">
-                                📸 Proof Uploaded
+                            <span class="text-xs font-medium text-success flex items-center gap-1.5">
+                                <i data-lucide="check-circle" class="w-4 h-4"></i> Proof Available
                             </span>
                         {% else %}
-                            <span></span>
+                            <span class="text-xs font-medium flex items-center gap-1.5" style="color:var(--text-muted);">
+                                <i data-lucide="clock" class="w-4 h-4"></i> Awaiting Closure
+                            </span>
                         {% endif %}
-                        <a href="/complaint/{{ complaint.id }}" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">View Details & Timeline &rarr;</a>
+                        <a href="/complaint/{{ complaint.id }}" class="text-sm font-semibold text-primary hover:text-primary-hover flex items-center gap-1">
+                            {{ _('open_case') }} <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </a>
                     </div>
+                    
                 </div>
             {% endfor %}
         </div>
     {% else %}
         <!-- Empty State -->
-        <div class="glass-card no-hover" style="text-align: center; padding: 4rem 2rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
-            <h3 style="margin-bottom: 0.5rem; font-weight: 600;">No complaints submitted yet</h3>
-            <p style="color: var(--text-secondary); max-width: 450px; margin: 0 auto 2rem auto; line-height: 1.5;">
-                Your dashboard is empty. If you notice potholes, sanitation concerns, broken streetlights, or other public issues, let us know!
-            </p>
-            <a href="/file-complaint" class="btn btn-primary">📝 Submit Your First Complaint</a>
+        <div class="rounded-2xl border border-dashed p-12 text-center" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="w-16 h-16 mx-auto bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-4">
+                <i data-lucide="inbox" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2" style="color:var(--text-primary);">{{ _('no_cases') }}</h3>
+            <p class="max-w-md mx-auto mb-6" style="color:var(--text-muted);">When you notice a public issue, create a case with location, description, and optional evidence. Your timeline will appear here.</p>
+            <a href="/file-complaint" class="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold btn-brand">
+                <i data-lucide="plus" class="w-4 h-4"></i> {{ _('report_new') }}
+            </a>
         </div>
     {% endif %}
 </div>

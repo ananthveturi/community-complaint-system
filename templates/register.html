@@ -1,46 +1,105 @@
 {% extends "base.html" %}
 
-{% block title %}Register Account - CCMS-Community Complaint Management System {% endblock %}
+{% block title %}{{ _('create_account') }} - CCMS{% endblock %}
 
 {% block content %}
-<div class="glass-container" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
-    <div class="glass-card no-hover" style="max-width: 500px; width: 100%;">
-        <h2 style="text-align: center; margin-bottom: 0.5rem; font-weight: 700;">Create Citizen Account</h2>
-        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Join CivicConnect to file and track local grievances</p>
-        
-        <form action="/register" method="POST" id="register-form">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" class="form-control" placeholder="Choose a unique username" required autofocus>
-            </div>
-            
-            <div class="form-group">
-                <label for="full_name">Full Name</label>
-                <input type="text" id="full_name" name="full_name" class="form-control" placeholder="Enter your full name" required>
-            </div>
+<div class="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style="background:var(--bg-body);">
+    <!-- Aura Blobs -->
+    <div class="aura-cyan" style="top:-80px;right:20%;"></div>
+    <div class="aura-yellow" style="bottom:-40px;left:15%;"></div>
 
-            <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 0;">
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="yourname@domain.com" required>
+    <!-- Logo / Header -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-md mb-8 text-center relative z-10 animate-fade-in-up">
+        <div class="mx-auto w-14 h-14 bg-gradient-to-br from-brand-violet to-brand-cyan text-white rounded-2xl flex items-center justify-center font-extrabold text-2xl shadow-glow mb-4">
+            C
+        </div>
+        <h2 class="text-3xl font-extrabold tracking-tight" style="color:var(--text-primary);">{{ _('create_account') }}</h2>
+        <p class="mt-2 text-sm" style="color:var(--text-secondary);">
+            Join CCMS to submit and track civic issues
+        </p>
+    </div>
+
+    <!-- Main Card -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-[500px] relative z-10 animate-fade-in-up" style="animation-delay:0.1s;">
+        <div class="py-8 px-4 border sm:rounded-2xl sm:px-10" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <form action="/register" method="POST" id="register-form" class="space-y-5">
+                <div>
+                    <label for="username" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('username') }}</label>
+                    <div class="mt-1 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                            <i data-lucide="at-sign" class="w-4 h-4"></i>
+                        </div>
+                        <input id="username" name="username" type="text" required autofocus
+                            class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="{{ _('username') }}">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone" class="form-control" placeholder="10-digit mobile number">
+                
+                <div>
+                    <label for="full_name" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('full_name') }}</label>
+                    <div class="mt-1 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                        </div>
+                        <input id="full_name" name="full_name" type="text" required
+                            class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="{{ _('full_name') }}">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Create a secure password" required minlength="6">
-                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Must be at least 6 characters long.</small>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1.5rem;">Register Account</button>
-        </form>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label for="email" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('email') }}</label>
+                        <div class="mt-1 relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                                <i data-lucide="mail" class="w-4 h-4"></i>
+                            </div>
+                            <input id="email" name="email" type="email" required
+                                class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                                style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                                placeholder="you@example.com">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="phone" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('phone') }}</label>
+                        <div class="mt-1 relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                                <i data-lucide="phone" class="w-4 h-4"></i>
+                            </div>
+                            <input id="phone" name="phone" type="tel"
+                                class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                                style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                                placeholder="{{ _('phone') }}">
+                        </div>
+                    </div>
+                </div>
 
-        <div style="text-align: center; font-size: 0.95rem; color: var(--text-secondary);">
-            Already have an account? <a href="/login" style="color: var(--primary); font-weight: 600; text-decoration: none;">Log in here</a>
+                <div>
+                    <label for="password" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('password') }}</label>
+                    <div class="mt-1 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                            <i data-lucide="lock" class="w-4 h-4"></i>
+                        </div>
+                        <input id="password" name="password" type="password" required minlength="6"
+                            class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full flex justify-center py-2.5 px-4 rounded-xl text-sm font-semibold text-white btn-brand focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all">
+                        {{ _('create_account') }}
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6 text-center text-sm" style="color:var(--text-secondary);">
+                Already registered? 
+                <a href="/login" class="font-semibold text-primary hover:text-primary-hover transition-colors">{{ _('login') }}</a>
+            </div>
         </div>
     </div>
 </div>

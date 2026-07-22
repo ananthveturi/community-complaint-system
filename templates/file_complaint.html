@@ -1,69 +1,405 @@
 {% extends "base.html" %}
 
-{% block title %}File Complaint - Community Complaint Management System {% endblock %}
+{% block title %}{{ _('new_complaint') }} - CCMS{% endblock %}
+
+{% block head %}
+<!-- Leaflet Map CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    /* Premium custom scrollbars for textareas */
+    textarea {
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="glass-container" style="max-width: 700px;">
-    <div style="margin-bottom: 2rem;">
-        <a href="/dashboard" style="color: var(--text-muted); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
-            &larr; Back to Dashboard
-        </a>
-        <h1 style="font-weight: 700; margin-top: 0.5rem;">File a New Complaint</h1>
-        <p style="color: var(--text-secondary);">Provide detail, location, and supporting pictures so municipal authorities can act quickly.</p>
+<div class="mb-8">
+    <h1 class="text-2xl font-extrabold tracking-tight" style="color:var(--text-primary);">{{ _('report_civic_issue') }}</h1>
+    <p class="text-sm mt-1" style="color:var(--text-muted);">Submit details to help municipal officials route, triage, and resolve the problem efficiently.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Wizard Card -->
+    <div class="lg:col-span-2">
+        <div class="rounded-2xl border overflow-hidden" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <!-- Wizard Step Progress -->
+            <div class="border-b px-6 py-4 flex items-center justify-between" style="background:var(--bg-input);border-color:var(--border);">
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-2">
+                        <span id="step-badge-1" class="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">1</span>
+                        <span class="text-xs font-semibold" style="color:var(--text-primary);">{{ _('grievance') }}</span>
+                    </div>
+                    <div class="h-px w-8" style="background:var(--border);"></div>
+                    <div class="flex items-center gap-2">
+                        <span id="step-badge-2" class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center" style="background:var(--border);color:var(--text-muted);">2</span>
+                        <span class="text-xs font-semibold" style="color:var(--text-muted);">{{ _('location') }}</span>
+                    </div>
+                    <div class="h-px w-8" style="background:var(--border);"></div>
+                    <div class="flex items-center gap-2">
+                        <span id="step-badge-3" class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center" style="background:var(--border);color:var(--text-muted);">3</span>
+                        <span class="text-xs font-semibold" style="color:var(--text-muted);">Evidence</span>
+                    </div>
+                </div>
+                <span id="step-label" class="text-xs font-bold text-primary uppercase tracking-wider">Step 1 of 3</span>
+            </div>
+
+            <!-- Form -->
+            <form action="/file-complaint" method="POST" enctype="multipart/form-data" id="complaint-wizard-form" class="p-6 md:p-8">
+                <!-- STEP 1: GRIEVANCE INFO -->
+                <div id="step-pane-1" class="space-y-6">
+                    <div>
+                        <label for="title" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('issue_title') }}</label>
+                        <input type="text" id="title" name="title" required autofocus
+                            class="block w-full px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="e.g., Broken streetlight near main crossing">
+                        <p class="text-xs mt-1.5" style="color:var(--text-muted);">Create a short, descriptive title summarizing the issue.</p>
+                    </div>
+
+                    <div>
+                        <label for="category" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('service_category') }}</label>
+                        <select id="category" name="category" required
+                            class="block w-full px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm appearance-none cursor-pointer"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
+                            <option value="" disabled selected>Select service category</option>
+                            <option value="Roads & Traffic">Roads & Traffic</option>
+                            <option value="Sanitation & Waste">Sanitation & Waste</option>
+                            <option value="Water Supply">Water Supply</option>
+                            <option value="Electricity & Power">Electricity & Power</option>
+                            <option value="Public Safety">Public Safety</option>
+                            <option value="Parks & Recreation">Parks & Recreation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <p class="text-xs mt-1.5" style="color:var(--text-muted);">Selecting the correct category allows the system to auto-classify and route to the correct team.</p>
+                    </div>
+
+                    <div class="pt-4 flex justify-end">
+                        <button type="button" onclick="nextStep(2)" class="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold btn-brand">
+                            {{ _('next_step') }} <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: LOCATION -->
+                <div id="step-pane-2" class="space-y-6 hidden">
+                    <div>
+                        <label for="location" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('exact_location') }}</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                            </div>
+                            <input type="text" id="location" name="location" required
+                                class="block w-full pl-10 px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                                style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                                placeholder="Street name, landmark, ward number">
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border p-4" style="background:var(--bg-input);border-color:var(--border);">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-sm font-bold" style="color:var(--text-primary);">Pinpoint on Interactive Map</h3>
+                                <p class="text-xs mt-0.5" style="color:var(--text-muted);">Drag the marker or click on the map to provide exact coordinates.</p>
+                            </div>
+                            <button type="button" id="use-current-location" class="inline-flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm hover:border-primary hover:text-primary" style="background:var(--bg-card);border-color:var(--border);color:var(--text-secondary);">
+                                <i data-lucide="crosshair" class="w-3.5 h-3.5 text-primary animate-pulse"></i> {{ _('use_gps') }}
+                            </button>
+                        </div>
+
+                        <!-- Hidden lat/lng inputs -->
+                        <input type="hidden" id="latitude" name="latitude">
+                        <input type="hidden" id="longitude" name="longitude">
+
+                        <div class="h-72 w-full rounded-xl overflow-hidden border relative z-0" id="map" style="border-color:var(--border);"></div>
+                        
+                        <p id="map-status" class="text-[11px] font-semibold mt-3 flex items-center gap-1.5" style="color:var(--text-muted);">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i> Marker not placed yet. Click map to place.
+                        </p>
+                    </div>
+
+                    <div class="pt-4 flex justify-between">
+                        <button type="button" onclick="prevStep(1)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium border transition-colors" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> {{ _('back') }}
+                        </button>
+                        <button type="button" onclick="nextStep(3)" class="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold btn-brand">
+                            {{ _('next_step') }} <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: IMPACT & EVIDENCE -->
+                <div id="step-pane-3" class="space-y-6 hidden">
+                    <div>
+                        <label for="description" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('impact_description') }}</label>
+                        <textarea id="description" name="description" required rows="5"
+                            class="block w-full px-4 py-3 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="What is the problem? Who is affected? Are there immediate hazards or traffic issues?"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('attach_photo') }}</label>
+                        <div class="relative group flex flex-col items-center justify-center p-6 border-2 border-dashed hover:border-primary rounded-2xl text-center transition-all cursor-pointer min-h-[160px]" style="background:var(--bg-input);border-color:var(--border);">
+                            <input type="file" name="image" id="complaint_image" accept="image/*"
+                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                            
+                            <div id="upload-prompt" class="space-y-2 pointer-events-none">
+                                <div class="w-10 h-10 mx-auto rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <i data-lucide="camera" class="w-5 h-5"></i>
+                                </div>
+                                <div class="text-sm font-bold" style="color:var(--text-secondary);">Click to upload photo</div>
+                                <p class="text-xs" style="color:var(--text-muted);">PNG, JPG, JPEG, GIF. Maximum file size 5MB.</p>
+                            </div>
+                            
+                            <!-- Image Preview -->
+                            <div id="preview-container" class="hidden relative max-h-[220px] rounded-xl overflow-hidden z-20">
+                                <img id="image-preview" src="" alt="Evidence preview" class="max-h-[200px] rounded-lg object-contain border shadow-sm" style="border-color:var(--border);" />
+                                <button type="button" id="remove-image-btn" class="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-600 text-white rounded-full p-1.5 shadow-md transition-colors">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex justify-between border-t" style="border-color:var(--border);">
+                        <button type="button" onclick="prevStep(2)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium border transition-colors" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> {{ _('back') }}
+                        </button>
+                        <div class="flex gap-3">
+                            <a href="/dashboard" class="inline-flex items-center justify-center px-5 py-2.5 border rounded-xl text-sm font-medium transition-colors" style="background:var(--bg-card);color:var(--text-secondary);border-color:var(--border);">
+                                {{ _('cancel') }}
+                            </a>
+                            <button type="submit" class="inline-flex items-center gap-2 text-white px-6 py-2.5 rounded-xl text-sm font-semibold btn-brand focus:ring-2 focus:ring-primary/20 outline-none">
+                                <i data-lucide="send" class="w-4 h-4"></i> {{ _('submit_grievance') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div class="glass-card no-hover">
-        <form action="/file-complaint" method="POST" enctype="multipart/form-data">
-            
-            <div class="form-group">
-                <label for="title">Complaint Title</label>
-                <input type="text" id="title" name="title" class="form-control" placeholder="Briefly name the issue (e.g. Waterlogging on Main Ave)" required autofocus>
-            </div>
-            
-            <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 0;">
-                <div class="form-group">
-                    <label for="category">Category</label>
-                    <select id="category" name="category" class="form-control" required>
-                        <option value="" disabled selected>Select category...</option>
-                        <option value="Roads & Traffic">Roads & Traffic (Potholes, Signals)</option>
-                        <option value="Sanitation & Waste">Sanitation & Waste (Garbage, Drains)</option>
-                        <option value="Water Supply">Water Supply (Leakage, Shortage)</option>
-                        <option value="Electricity & Power">Electricity & Power (Outage, Streetlight)</option>
-                        <option value="Public Safety">Public Safety (Vandalism, Fire Hazard)</option>
-                        <option value="Parks & Recreation">Parks & Recreation (Damaged bench, Overgrowth)</option>
-                        <option value="Other">Other Issues</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="location">Location / Landmark</label>
-                    <input type="text" id="location" name="location" class="form-control" placeholder="Street address or nearest landmark" required>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="description">Detailed Description</label>
-                <textarea id="description" name="description" class="form-control" rows="5" placeholder="Explain the issue in detail. Mention when it started, how it affects residents, etc." required></textarea>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <label>Supporting Photo (Optional)</label>
-                <div class="file-upload-wrapper">
-                    <div class="upload-placeholder">
-                        <div class="upload-icon">📸</div>
-                        <p style="font-weight: 600; margin-bottom: 0.25rem;">Click to upload photo</p>
-                        <p style="font-size: 0.8rem; color: var(--text-muted);">Supports PNG, JPG, JPEG (Max 5MB)</p>
+    <!-- Info/Tips Column -->
+    <div class="space-y-6">
+        <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-base font-bold mb-4 flex items-center gap-2 border-b pb-3" style="color:var(--text-primary);border-color:var(--border);">
+                <i data-lucide="help-circle" class="w-5 h-5 text-primary"></i> Intake Guidelines
+            </h3>
+            <ul class="space-y-4">
+                <li class="flex gap-3">
+                    <div class="w-6 h-6 rounded-full bg-brand-violet/10 text-brand-violet flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
                     </div>
-                    <input type="file" name="image" class="file-upload-input" accept="image/*" id="complaint_image">
-                    <img src="" alt="Selected Preview" class="image-preview" onerror="this.style.display='none';">
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                <a href="/dashboard" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">Submit Complaint</button>
-            </div>
-        </form>
+                    <div>
+                        <h4 class="text-sm font-bold" style="color:var(--text-primary);">Clear Title</h4>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted);">Keep titles descriptive, noting the specific object and landmark (e.g. "Pothole in middle lane").</p>
+                    </div>
+                </li>
+                <li class="flex gap-3">
+                    <div class="w-6 h-6 rounded-full bg-brand-cyan/10 text-brand-cyan flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold" style="color:var(--text-primary);">Interactive Location</h4>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted);">Use the map pointer or GPS for coordinates. Field teams resolve cases 40% faster with coordinates.</p>
+                    </div>
+                </li>
+                <li class="flex gap-3">
+                    <div class="w-6 h-6 rounded-full bg-brand-pink/10 text-brand-pink flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold" style="color:var(--text-primary);">Visual Evidence</h4>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted);">A clear photograph prevents engineers from visiting the wrong spot and cataloging wrong sizes.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="rounded-2xl border p-6" style="background:rgba(139,92,246,0.06);border-color:rgba(139,92,246,0.15);">
+            <h3 class="text-sm font-bold text-primary mb-2 flex items-center gap-2">
+                <i data-lucide="cpu" class="w-4.5 h-4.5"></i> AI-Assisted Resolution
+            </h3>
+            <p class="text-xs leading-relaxed" style="color:var(--text-secondary);">
+                When you submit, our system uses natural language processing to automatically tag the appropriate municipal department and forecast the priority classification.
+            </p>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet Map JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Multi-step Wizard Navigation Logic
+    let currentStep = 1;
+
+    function showStep(step) {
+        document.getElementById('step-pane-1').classList.add('hidden');
+        document.getElementById('step-pane-2').classList.add('hidden');
+        document.getElementById('step-pane-3').classList.add('hidden');
+        
+        document.getElementById(`step-pane-${step}`).classList.remove('hidden');
+        
+        // Update labels and indicators
+        document.getElementById('step-label').textContent = `Step ${step} of 3`;
+        
+        // Badges styles
+        for (let i = 1; i <= 3; i++) {
+            const badge = document.getElementById(`step-badge-${i}`);
+            if (i < step) {
+                // Done
+                badge.className = "w-6 h-6 rounded-full bg-green-500 text-white text-xs font-bold flex items-center justify-center";
+                badge.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i>';
+            } else if (i === step) {
+                // Active
+                badge.className = "w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center";
+                badge.textContent = i;
+            } else {
+                // Future
+                badge.className = "w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center";
+                badge.style.background = 'var(--border)';
+                badge.style.color = 'var(--text-muted)';
+                badge.textContent = i;
+            }
+        }
+        lucide.createIcons();
+        
+        currentStep = step;
+        
+        // Leaflet map refresh when shown
+        if (step === 2 && map) {
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        }
+    }
+
+    function nextStep(step) {
+        // Validation
+        if (step === 2) {
+            const title = document.getElementById('title');
+            const category = document.getElementById('category');
+            if (!title.value.trim() || !category.value) {
+                alert("Please fill in the title and select a category.");
+                return;
+            }
+        } else if (step === 3) {
+            const locationInput = document.getElementById('location');
+            if (!locationInput.value.trim()) {
+                alert("Please specify a location address.");
+                return;
+            }
+        }
+        
+        showStep(step);
+    }
+
+    function prevStep(step) {
+        showStep(step);
+    }
+
+    // Map Integration
+    let map;
+    let marker;
+
+    function initMap() {
+        // Standard center (India: 20.5937, 78.9629)
+        map = L.map('map').setView([20.5937, 78.9629], 5);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        map.on('click', function(e) {
+            placeMarker(e.latlng.lat, e.latlng.lng);
+        });
+    }
+
+    function placeMarker(lat, lng) {
+        document.getElementById('latitude').value = lat.toFixed(7);
+        document.getElementById('longitude').value = lng.toFixed(7);
+        
+        const statusEl = document.getElementById('map-status');
+        if (statusEl) {
+            statusEl.className = "text-[11px] font-semibold text-success flex items-center gap-1.5";
+            statusEl.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Coordinates Selected: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            lucide.createIcons();
+        }
+
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+            marker.on('dragend', function() {
+                const pos = marker.getLatLng();
+                placeMarker(pos.lat, pos.lng);
+            });
+        }
+    }
+
+    // Geolocation API
+    document.getElementById('use-current-location').addEventListener('click', () => {
+        const statusEl = document.getElementById('map-status');
+        if (navigator.geolocation) {
+            if (statusEl) statusEl.textContent = "Obtaining GPS lock...";
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 15);
+                    placeMarker(lat, lng);
+                    
+                    const addressInput = document.getElementById('location');
+                    if (!addressInput.value.trim()) {
+                        addressInput.value = `GPS Coordinates (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                    }
+                },
+                () => {
+                    alert("Unable to retrieve location. Please grant permission or type address manually.");
+                    if (statusEl) statusEl.textContent = "GPS Access Denied.";
+                },
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        }
+    });
+
+    // Image Upload Preview Logic
+    const imageInput = document.getElementById('complaint_image');
+    const uploadPrompt = document.getElementById('upload-prompt');
+    const previewContainer = document.getElementById('preview-container');
+    const previewImage = document.getElementById('image-preview');
+    const removeImageBtn = document.getElementById('remove-image-btn');
+
+    imageInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                uploadPrompt.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    removeImageBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        imageInput.value = '';
+        previewImage.src = '';
+        previewContainer.classList.add('hidden');
+        uploadPrompt.classList.remove('hidden');
+    });
+
+    // Initialize map on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+    });
+</script>
 {% endblock %}

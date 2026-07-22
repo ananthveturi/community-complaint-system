@@ -1,298 +1,469 @@
 {% extends "base.html" %}
 
-{% block title %}Complaint #{{ complaint.id }} - Community Complaint Management System {% endblock %}
+{% block title %}Case #{{ complaint.id }} - CCMS{% endblock %}
+
+{% block head %}
+<!-- Leaflet Map CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    /* Styling for custom before/after image slider */
+    .compare-container {
+        position: relative;
+        width: 100%;
+        height: 380px;
+        overflow: hidden;
+        user-select: none;
+    }
+    .compare-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .compare-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    .compare-handle {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #ffffff;
+        cursor: ew-resize;
+        z-index: 30;
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .compare-button {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #ffffff;
+        color: #0F172A;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        font-weight: bold;
+        pointer-events: none;
+        border: 1px solid var(--border);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="glass-container">
-    <!-- Back Navigation -->
-    <div style="margin-bottom: 1.5rem;">
+<div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-3">
         {% if session.get('role') == 'admin' %}
-            <a href="/admin/dashboard" style="color: var(--text-muted); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
-                &larr; Back to Admin Dashboard
+            <a href="/admin/dashboard" class="inline-flex items-center justify-center w-9 h-9 rounded-xl border transition-colors hover:border-primary hover:text-primary" style="background:var(--bg-card);border-color:var(--border);color:var(--text-secondary);">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
             </a>
         {% else %}
-            <a href="/dashboard" style="color: var(--text-muted); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
-                &larr; Back to My Dashboard
+            <a href="/dashboard" class="inline-flex items-center justify-center w-9 h-9 rounded-xl border transition-colors hover:border-primary hover:text-primary" style="background:var(--bg-card);border-color:var(--border);color:var(--text-secondary);">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
             </a>
         {% endif %}
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-mono" style="color:var(--text-muted);">Case #{{ complaint.id }}</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider border
+                    {% if complaint.status == 'Pending' %} bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/30
+                    {% elif complaint.status == 'Under Review' %} bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/30
+                    {% elif complaint.status == 'In Progress' %} bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700/30
+                    {% elif complaint.status == 'Resolved' %} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700/30
+                    {% else %} bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700/30 {% endif %}">
+                    {% if complaint.status == 'Pending' %}{{ _('pending') }}
+                    {% elif complaint.status == 'Under Review' %}{{ _('under_review') }}
+                    {% elif complaint.status == 'In Progress' %}{{ _('in_progress') }}
+                    {% elif complaint.status == 'Resolved' %}{{ _('resolved') }}
+                    {% else %}{{ _('rejected') }}{% endif %}
+                </span>
+            </div>
+            <h1 class="text-xl font-extrabold tracking-tight mt-0.5" style="color:var(--text-primary);">{{ complaint.title }}</h1>
+        </div>
     </div>
+</div>
 
-    <!-- Main Grid layout: Details vs. Timeline/Comments -->
-    <div class="grid-2">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Left Column: Details, Map, Evidence, Feedback -->
+    <div class="lg:col-span-2 space-y-6">
         
-        <!-- Left Column: Details & Images -->
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Case Overview Card -->
+        <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h2 class="text-base font-bold mb-4 pb-2 border-b" style="color:var(--text-primary);border-color:var(--border);">{{ _('details_impact') }}</h2>
             
-            <!-- Complaint Summary Card -->
-            <div class="glass-card no-hover">
-                <div class="flex-row-between" style="margin-bottom: 1rem; align-items: flex-start; gap: 0.5rem;">
-                    <span class="badge badge-{{ 'pending' if complaint.status == 'Pending' else 'review' if complaint.status == 'Under Review' else 'progress' if complaint.status == 'In Progress' else 'resolved' if complaint.status == 'Resolved' else 'rejected' }}" style="font-size: 0.9rem;">
-                        {{ complaint.status }}
-                    </span>
-                    <span style="font-size: 0.9rem; color: var(--text-muted);">
-                        Filed: {{ complaint.created_at }}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">{{ _('service_category') }}</span>
+                    <span class="text-sm font-semibold flex items-center gap-1.5 mt-1" style="color:var(--text-primary);">
+                        <i data-lucide="tag" class="w-4 h-4 text-primary"></i> {{ complaint.category }}
                     </span>
                 </div>
-                
-                <h1 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 1rem; line-height: 1.3;">{{ complaint.title }}</h1>
-                
-                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                    <span style="font-size: 0.9rem; background: var(--bg-primary); padding: 0.35rem 0.65rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
-                        📂 Category: <strong>{{ complaint.category }}</strong>
+                <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">{{ _('assigned_dept') }}</span>
+                    <span class="text-sm font-semibold flex items-center gap-1.5 mt-1" style="color:var(--text-primary);">
+                        <i data-lucide="briefcase" class="w-4 h-4 text-primary"></i> {{ complaint.department or 'Not Assigned Yet' }}
                     </span>
-                    <span style="font-size: 0.9rem; background: var(--bg-primary); padding: 0.35rem 0.65rem; border-radius: var(--border-radius-sm); border: 1px solid var(--bg-card-border);">
-                        📍 Location: <strong>{{ complaint.location }}</strong>
-                    </span>
-                    {% if complaint.department %}
-                    <span style="font-size: 0.9rem; background: var(--primary-light); color: var(--primary); padding: 0.35rem 0.65rem; border-radius: var(--border-radius-sm); font-weight: 600;">
-                        🏢 Department: {{ complaint.department }}
-                    </span>
-                    {% endif %}
-                </div>
-
-                <div style="margin-bottom: 1.5rem;">
-                    <h3 style="margin-bottom: 0.5rem; font-weight: 600;">Description</h3>
-                    <p style="color: var(--text-secondary); line-height: 1.6; white-space: pre-line;">{{ complaint.description }}</p>
-                </div>
-
-                <div style="font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--bg-card-border); padding-top: 1rem;">
-                    Submitted by: <strong>{{ complaint.citizen_name }}</strong><br>
-                    Contact Info: {{ complaint.citizen_email }} {% if complaint.citizen_phone %}| {{ complaint.citizen_phone }}{% endif %}
                 </div>
             </div>
 
-            <!-- Visual Evidence & Verification Showcase -->
-            {% if complaint.image_path or (complaint.status == 'Resolved' and complaint.resolution_image_path) %}
-            <div class="glass-card no-hover">
-                <h3 style="margin-bottom: 1rem; font-weight: 600;">📸 Visual Evidence & Verification</h3>
-                
-                {% if complaint.status == 'Resolved' %}
-                <div class="resolution-showcase">
-                    <!-- Original Image -->
-                    <div class="showcase-image-wrapper">
-                        {% if complaint.image_path %}
-                            <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo" onerror="this.style.display='none';">
-                        {% else %}
-                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: rgba(0,0,0,0.02); border: 1px dashed var(--bg-card-border); color: var(--text-muted); font-size: 0.9rem;">
-                                No issue photo provided.
-                            </div>
-                        {% endif %}
-                        <div class="showcase-label">Original Issue Photo</div>
-                    </div>
-                    
-                    <!-- Resolution Proof Image -->
-                    <div class="showcase-image-wrapper">
-                        {% if complaint.resolution_image_path %}
-                            <img src="{{ url_for('static', filename='uploads/' + complaint.resolution_image_path) }}" alt="Resolution Proof Photo" onerror="this.style.display='none';">
-                        {% else %}
-                            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: var(--warning-light); color: var(--warning); font-size: 0.9rem; font-weight: 500;">
-                                Proof image pending
-                            </div>
-                        {% endif %}
-                        <div class="showcase-label" style="background: rgba(16, 185, 129, 0.95);">Official Resolution Proof</div>
-                    </div>
+            <div class="mb-6">
+                <span class="block text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">{{ _('impact_description') }}</span>
+                <div class="border rounded-xl p-4 text-sm whitespace-pre-line leading-relaxed" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                    {{ complaint.description }}
                 </div>
-                {% else %}
-                    <!-- Single Image Display for Pending / In Progress -->
-                    {% if complaint.image_path %}
-                    <div class="showcase-image-wrapper" style="height: 350px;">
-                        <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" alt="Reported Issue Photo" onerror="this.style.display='none';">
-                        <div class="showcase-label">Citizen Issue Photo</div>
-                    </div>
-                    {% endif %}
-                {% endif %}
             </div>
-            {% endif %}
 
-            <!-- Feedback Details (For citizen and admin to see feedback rating) -->
-            {% if feedback %}
-            <div class="glass-card no-hover" style="border-color: var(--success); background: var(--success-light);">
-                <h3 style="color: var(--success); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
-                    ⭐ Citizen Satisfaction Rating
-                </h3>
-                <div style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--warning);">
-                    {% for i in range(feedback.rating) %}★{% endfor %}{% for i in range(5 - feedback.rating) %}☆{% endfor %}
-                    <span style="font-size: 1rem; color: var(--text-primary); font-weight: 600; margin-left: 0.5rem;">({{ feedback.rating }} / 5)</span>
-                </div>
-                {% if feedback.comments %}
-                <p style="color: var(--text-secondary); font-style: italic; line-height: 1.4;">
-                    "{{ feedback.comments }}"
-                </p>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Feedback Submission Panel (Only for complaint filer when resolved & no feedback exists) -->
-            {% if complaint.status == 'Resolved' and not feedback and session.get('role') == 'citizen' and session.get('user_id') == complaint.citizen_id %}
-            <div class="glass-card no-hover" style="border-color: var(--primary-glow);">
-                <h3 style="margin-bottom: 0.5rem; font-weight: 600;">Rate Resolution Quality</h3>
-                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-                    Please rate your satisfaction with the action taken by the municipal authority.
-                </p>
-                
-                <form action="/complaint/{{ complaint.id }}/feedback" method="POST">
-                    <div class="form-group">
-                        <label>Satisfaction Score</label>
-                        <div class="rating-selector">
-                            <input type="radio" id="star5" name="rating" value="5" required><label for="star5" title="5 stars">★</label>
-                            <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars">★</label>
-                            <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars">★</label>
-                            <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars">★</label>
-                            <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star">★</label>
+            <!-- AI Insights Panel -->
+            {% if complaint.ai_category or complaint.ai_priority %}
+                <div class="rounded-xl p-4 flex items-center flex-wrap gap-4 justify-between border" style="background:rgba(139,92,246,0.06);border-color:rgba(139,92,246,0.15);">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                            <i data-lucide="cpu" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold" style="color:var(--text-primary);">{{ _('ai_classification') }}</h4>
+                            <p class="text-[10px]" style="color:var(--text-muted);">Automated predictions based on citizen statement</p>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="feedback-comments">Grievance Feedback / Review</label>
-                        <textarea id="feedback-comments" name="comments" class="form-control" rows="3" placeholder="Tell us if you are satisfied with this resolution..."></textarea>
+                    <div class="flex gap-3">
+                        {% if complaint.ai_category %}
+                            <div class="border rounded-lg px-2.5 py-1 text-xs shadow-sm flex items-center gap-1.5" style="background:var(--bg-card);border-color:rgba(139,92,246,0.2);">
+                                <span class="text-[10px] font-medium" style="color:var(--text-muted);">Category:</span>
+                                <span class="font-semibold" style="color:var(--text-primary);">{{ complaint.ai_category }}</span>
+                            </div>
+                        {% endif %}
+                        {% if complaint.ai_priority %}
+                            <div class="border rounded-lg px-2.5 py-1 text-xs shadow-sm flex items-center gap-1.5" style="background:var(--bg-card);border-color:rgba(139,92,246,0.2);">
+                                <span class="text-[10px] font-medium" style="color:var(--text-muted);">Priority:</span>
+                                <span class="font-semibold text-danger flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-danger animate-pulse"></span>
+                                    {{ complaint.ai_priority }}
+                                </span>
+                            </div>
+                        {% endif %}
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Feedback</button>
-                </form>
+                </div>
+            {% endif %}
+            
+            <div class="mt-6 pt-4 border-t flex items-center justify-between text-xs" style="border-color:var(--border);color:var(--text-muted);">
+                <div class="flex items-center gap-1.5">
+                    <i data-lucide="user" class="w-3.5 h-3.5"></i> Reported by {{ complaint.citizen_name }}
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Filed {{ complaint.created_at }}
+                </div>
             </div>
+        </div>
+
+        <!-- Before/After Evidence Card -->
+        {% if complaint.image_path or (complaint.status == 'Resolved' and complaint.resolution_image_path) %}
+            <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+                <h2 class="text-base font-bold mb-4 pb-2 border-b" style="color:var(--text-primary);border-color:var(--border);">{{ _('visual_evidence') }}</h2>
+                
+                {% if complaint.status == 'Resolved' and complaint.image_path and complaint.resolution_image_path %}
+                    <!-- Interactive Before/After Compare Slider -->
+                    <div class="compare-container rounded-xl border shadow-sm" style="border-color:var(--border);">
+                        <!-- After Image -->
+                        <img src="{{ url_for('static', filename='uploads/' + complaint.resolution_image_path) }}" class="compare-img" alt="Resolved work" />
+                        
+                        <!-- Before Image -->
+                        <div class="compare-overlay" id="slider-overlay">
+                            <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" class="compare-img max-w-none" id="slider-img" alt="Reported issue" />
+                        </div>
+                        
+                        <!-- Slider Line and Handle -->
+                        <div class="compare-handle" id="slider-line">
+                            <div class="compare-button">
+                                <i data-lucide="split" class="w-4 h-4" style="color:var(--text-secondary);"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Labels -->
+                        <div class="absolute bottom-3 right-3 bg-slate-900/80 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded shadow-sm z-20">Resolved Proof</div>
+                        <div class="absolute bottom-3 left-3 bg-slate-900/80 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded shadow-sm z-20">Reported Condition</div>
+                    </div>
+                {% else %}
+                    <!-- Single Image Display -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% if complaint.image_path %}
+                            <div class="relative rounded-xl overflow-hidden border group" style="border-color:var(--border);">
+                                <img src="{{ url_for('static', filename='uploads/' + complaint.image_path) }}" class="w-full h-64 object-cover" alt="Reported issue evidence" />
+                                <div class="absolute bottom-3 left-3 bg-slate-900/80 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded shadow-sm">Reported Condition</div>
+                            </div>
+                        {% endif %}
+                        {% if complaint.resolution_image_path %}
+                            <div class="relative rounded-xl overflow-hidden border group" style="border-color:var(--border);">
+                                <img src="{{ url_for('static', filename='uploads/' + complaint.resolution_image_path) }}" class="w-full h-64 object-cover" alt="Resolved work proof" />
+                                <div class="absolute bottom-3 left-3 bg-slate-900/80 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded shadow-sm">Resolution Proof</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <!-- Location Map Card -->
+        <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 pb-2 border-b" style="border-color:var(--border);">
+                <div>
+                    <h2 class="text-base font-bold" style="color:var(--text-primary);">{{ _('incident_location') }}</h2>
+                    <p class="text-xs mt-0.5" style="color:var(--text-muted);">{{ complaint.location }}</p>
+                </div>
+                <a target="_blank" rel="noopener" 
+                   href="https://www.google.com/maps/search/?api=1&query={% if complaint.latitude and complaint.longitude %}{{ complaint.latitude }},{{ complaint.longitude }}{% else %}{{ complaint.location|urlencode }}{% endif %}"
+                   class="inline-flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm hover:border-primary hover:text-primary" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open in Google Maps
+                </a>
+            </div>
+
+            <!-- Leaflet Interactive Map -->
+            <div class="h-64 rounded-xl border shadow-sm z-0 relative" id="detail-map" style="border-color:var(--border);"
+                 data-latitude="{{ complaint.latitude if complaint.latitude is not none else '' }}"
+                 data-longitude="{{ complaint.longitude if complaint.longitude is not none else '' }}"></div>
+            {% if complaint.latitude is not none and complaint.longitude is not none %}
+                <p class="text-[10px] font-mono mt-2" style="color:var(--text-muted);">Captured Coordinates: {{ complaint.latitude }}, {{ complaint.longitude }}</p>
+            {% else %}
+                <p class="text-[10px] mt-2" style="color:var(--text-muted);">No direct GPS coordinates. Displaying approximate geocoding location.</p>
             {% endif %}
         </div>
 
-        <!-- Right Column: Timeline & Comments -->
-        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            
-            <!-- Admin Controls Panel -->
-            {% if session.get('role') == 'admin' %}
-            <div class="glass-card no-hover" style="border-color: var(--primary-glow);">
-                <h3 style="margin-bottom: 1rem; font-weight: 600; color: var(--primary);">🛠️ Administrator Actions</h3>
-                
-                <form action="/complaint/{{ complaint.id }}/action" method="POST" enctype="multipart/form-data">
-                    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 0;">
-                        <div class="form-group">
-                            <label for="admin-status-select">Update Status</label>
-                            <select id="admin-status-select" name="status" class="form-control" required>
-                                <option value="Pending" {% if complaint.status == 'Pending' %}selected{% endif %}>Pending</option>
-                                <option value="Under Review" {% if complaint.status == 'Under Review' %}selected{% endif %}>Under Review</option>
-                                <option value="In Progress" {% if complaint.status == 'In Progress' %}selected{% endif %}>In Progress</option>
-                                <option value="Resolved" {% if complaint.status == 'Resolved' %}selected{% endif %}>Resolved</option>
-                                <option value="Rejected" {% if complaint.status == 'Rejected' %}selected{% endif %}>Rejected</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="department">Assign Department</label>
-                            <input type="text" id="department" name="department" class="form-control" placeholder="e.g. Sanitation, Roads" value="{{ complaint.department or '' }}">
-                        </div>
-                    </div>
-
-                    <!-- Proof Upload Form Group: Toggled dynamically in JS when 'Resolved' is chosen -->
-                    <div class="form-group" id="resolution-proof-group" style="display: none; margin-bottom: 1.5rem;">
-                        <label style="color: var(--danger); font-weight: 600;">📸 Upload Resolution Proof Image (Required)</label>
-                        <div class="file-upload-wrapper" style="border-color: var(--danger-light); padding: 1.5rem;">
-                            <div class="upload-placeholder">
-                                <div class="upload-icon" style="color: var(--danger);">📷</div>
-                                <p style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem;">Select image proof</p>
-                                <p style="font-size: 0.75rem; color: var(--text-muted);">Snap photo of completed resolution (Pothole covered, etc.)</p>
-                            </div>
-                            <input type="file" name="resolution_proof" class="file-upload-input" accept="image/*" id="resolution_proof">
-                            <img src="" alt="Selected Preview" class="image-preview" onerror="this.style.display='none';">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="action-message">Official Update Note / Message</label>
-                        <textarea id="action-message" name="message" class="form-control" rows="3" placeholder="Provide details about the status change or assignment notes (this will be added to the public timeline)..."></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Apply Updates</button>
-                </form>
-            </div>
-            {% endif %}
-
-            <!-- Interactive Timeline & Discussion Thread -->
-            <div class="glass-card no-hover" style="display: flex; flex-direction: column; height: 100%;">
-                <h3 style="margin-bottom: 1.5rem; font-weight: 600;">💬 Timeline & Discussion</h3>
-                
-                <!-- Comment Chat List -->
-                <div class="comments-container" id="comments-box">
-                    {% for update in updates %}
-                        <div class="comment-bubble {% if update.author_role == 'admin' %}admin{% else %}citizen{% endif %}">
-                            <div class="comment-meta">
-                                <span>{{ update.author_name }}</span>
-                                <span style="font-size: 0.75rem; font-weight: normal; opacity: 0.8;">({{ update.author_role }})</span>
-                                <span style="font-weight: normal; margin-left: auto; font-size: 0.75rem;">{{ update.created_at[11:16] }}</span>
-                            </div>
-                            
-                            <!-- Highlight status updates on timeline inside chat if they exist -->
-                            {% if update.status_from or update.status_to %}
-                                <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem; color: var(--primary);">
-                                    {% if update.status_from %}
-                                        Status changed: <span style="text-decoration: line-through; opacity: 0.7;">{{ update.status_from }}</span> &rarr; <strong>{{ update.status_to }}</strong>
-                                    {% else %}
-                                        Status initialized: <strong>{{ update.status_to }}</strong>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                            
-                            {% if update.message %}
-                                <p class="comment-text">{{ update.message }}</p>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 2rem 0;">
-                            No updates or discussions yet.
-                        </div>
+        <!-- Citizen Review Feedback Card -->
+        {% if feedback %}
+            <div class="rounded-2xl p-6 border" style="background:rgba(34,197,94,0.06);border-color:rgba(34,197,94,0.20);">
+                <h3 class="text-base font-bold mb-2 flex items-center gap-2 text-success">
+                    <i data-lucide="smile" class="w-5 h-5"></i> Citizen Closure Review
+                </h3>
+                <div class="flex items-center gap-1.5 mb-3">
+                    {% for i in range(1, 6) %}
+                        <i data-lucide="star" class="w-5 h-5 {% if i <= feedback.rating %}fill-amber-400 text-amber-400{% else %}text-slate-300 dark:text-slate-600{% endif %}"></i>
                     {% endfor %}
+                    <span class="text-sm font-bold ml-1" style="color:var(--text-primary);">{{ feedback.rating }} / 5 rating</span>
                 </div>
-
-                <!-- Add Comment Form -->
-                {% if session.get('user_id') %}
-                <form action="/complaint/{{ complaint.id }}/comment" method="POST" style="margin-top: auto;">
-                    <div style="display: flex; gap: 0.75rem;">
-                        <input type="text" name="comment" class="form-control" placeholder="Ask a question or provide details..." required autocomplete="off" style="flex: 1;">
-                        <button type="submit" class="btn btn-primary" style="padding: 0.75rem 1.25rem;">Send</button>
-                    </div>
-                </form>
-                {% else %}
-                <p style="text-align: center; font-size: 0.9rem; color: var(--text-muted);">
-                    Please <a href="/login">log in</a> to post a comment.
-                </p>
+                {% if feedback.comments %}
+                    <p class="text-sm italic border-l-2 border-green-400 pl-3.5 leading-relaxed" style="color:var(--text-secondary);">{{ feedback.comments }}</p>
                 {% endif %}
             </div>
+        {% endif %}
 
-            <!-- Historical Status Timeline Node Indicator -->
-            <div class="glass-card no-hover">
-                <h3 style="margin-bottom: 1rem; font-weight: 600;">📈 Life Cycle Steps</h3>
+        <!-- File Feedback Card -->
+        {% if complaint.status == 'Resolved' and not feedback and session.get('role') == 'citizen' and session.get('user_id') == complaint.citizen_id %}
+            <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+                <h3 class="text-base font-bold mb-2 flex items-center gap-2" style="color:var(--text-primary);">
+                    <i data-lucide="star" class="w-5 h-5 text-primary"></i> Rate the Resolution
+                </h3>
+                <p class="text-xs mb-4" style="color:var(--text-muted);">Please rate your satisfaction with the completed resolution to close this ledger case.</p>
                 
-                <ul class="timeline">
-                    <li class="timeline-item completed">
-                        <div class="timeline-icon"></div>
-                        <div class="timeline-content">
-                            <h4 style="font-size: 0.95rem; font-weight: 600;">Complaint Filed</h4>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Grievance documented and registered in SQLite database.</p>
+                <form action="/complaint/{{ complaint.id }}/feedback" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">{{ _('satisfaction_score') }}</label>
+                        <div class="flex items-center gap-2">
+                            {% for i in range(5, 0, -1) %}
+                                <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" class="hidden peer" required>
+                                <label for="star{{ i }}" class="text-3xl text-slate-300 dark:text-slate-600 hover:text-amber-400 peer-checked:text-amber-400 cursor-pointer transition-colors order-{{ 6 - i }}">★</label>
+                            {% endfor %}
                         </div>
-                    </li>
-                    
-                    <li class="timeline-item {% if complaint.status in ['Under Review', 'In Progress', 'Resolved'] %}completed{% elif complaint.status == 'Pending' %}active{% endif %}">
-                        <div class="timeline-icon"></div>
-                        <div class="timeline-content">
-                            <h4 style="font-size: 0.95rem; font-weight: 600;">Under Review</h4>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Officials examine details, assign departments, and check validity.</p>
-                        </div>
-                    </li>
-
-                    <li class="timeline-item {% if complaint.status in ['In Progress', 'Resolved'] %}completed{% elif complaint.status == 'Under Review' %}active{% endif %}">
-                        <div class="timeline-icon"></div>
-                        <div class="timeline-content">
-                            <h4 style="font-size: 0.95rem; font-weight: 600;">In Progress</h4>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Municipal workers are dispatched and repairs are scheduled.</p>
-                        </div>
-                    </li>
-
-                    <li class="timeline-item {% if complaint.status == 'Resolved' %}completed{% elif complaint.status == 'In Progress' %}active{% endif %}">
-                        <div class="timeline-icon"></div>
-                        <div class="timeline-content">
-                            <h4 style="font-size: 0.95rem; font-weight: 600;">Resolved</h4>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary);">Repairs complete, verification proof photo uploaded for inspection.</p>
-                        </div>
-                    </li>
-                </ul>
+                    </div>
+                    <div>
+                        <label for="feedback-comments" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">{{ _('feedback_comment') }}</label>
+                        <textarea id="feedback-comments" name="comments" rows="3"
+                            class="block w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="Was the problem fully resolved? Let us know."></textarea>
+                    </div>
+                    <button type="submit" class="text-white px-5 py-2 rounded-xl text-sm font-semibold btn-brand transition-colors">
+                        {{ _('submit_feedback') }}
+                    </button>
+                </form>
             </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Admin Actions, Timeline Progress, Updates Feed -->
+    <div class="space-y-6">
+        
+        <!-- Admin Resolution Action Card -->
+        {% if session.get('role') == 'admin' %}
+            <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+                <h3 class="text-base font-bold mb-4 pb-2 border-b flex items-center gap-2" style="color:var(--text-primary);border-color:var(--border);">
+                    <i data-lucide="shield-alert" class="w-5 h-5 text-primary"></i> {{ _('admin_actions') }}
+                </h3>
+                <form action="/complaint/{{ complaint.id }}/action" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <div>
+                        <label for="admin-status-select" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">{{ _('status') }}</label>
+                        <select id="admin-status-select" name="status" required
+                            class="block w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
+                            <option value="Pending" {% if complaint.status == 'Pending' %}selected{% endif %}>{{ _('pending') }}</option>
+                            <option value="Under Review" {% if complaint.status == 'Under Review' %}selected{% endif %}>{{ _('under_review') }}</option>
+                            <option value="In Progress" {% if complaint.status == 'In Progress' %}selected{% endif %}>{{ _('in_progress') }}</option>
+                            <option value="Resolved" {% if complaint.status == 'Resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
+                            <option value="Rejected" {% if complaint.status == 'Rejected' %}selected{% endif %}>{{ _('rejected') }}</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="department" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">{{ _('department') }}</label>
+                        <input type="text" id="department" name="department" class="block w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);" placeholder="e.g. Public Works" value="{{ complaint.department or '' }}">
+                    </div>
+
+                    <!-- Upload Proof Group (Conditional) -->
+                    <div id="resolution-proof-group" class="hidden">
+                        <label class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">Upload Closure Proof Photo</label>
+                        <div class="relative border border-dashed hover:border-primary rounded-xl p-4 text-center cursor-pointer min-h-[110px] flex flex-col justify-center items-center" style="background:var(--bg-input);border-color:var(--border);">
+                            <input type="file" name="resolution_proof" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/*" id="resolution_proof_input">
+                            <div class="space-y-1 z-0 pointer-events-none" id="proof-upload-prompt">
+                                <i data-lucide="image" class="w-5 h-5 text-primary mx-auto"></i>
+                                <div class="text-xs font-bold" style="color:var(--text-secondary);">Attach verification photo</div>
+                                <p class="text-[10px]" style="color:var(--text-muted);">Required to mark case as Resolved</p>
+                            </div>
+                            <img id="proof-preview" class="hidden max-h-[100px] rounded object-contain border" style="border-color:var(--border);" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="action-message" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">{{ _('official_note') }}</label>
+                        <textarea id="action-message" name="message" rows="3"
+                            class="block w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="Provide a status update description for the citizen timeline."></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full text-white py-2 rounded-xl text-sm font-semibold btn-brand transition-colors">
+                        {{ _('apply_update') }}
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+
+        <!-- Timeline Case Progress Card -->
+        <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-base font-bold mb-4 pb-2 border-b" style="color:var(--text-primary);border-color:var(--border);">{{ _('service_progress') }}</h3>
+            
+            <div class="space-y-6 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5" style="--tw-before-bg:var(--border);">
+                <!-- Case Reported -->
+                <div class="flex gap-4 relative">
+                    <div class="w-6.5 h-6.5 rounded-full bg-success text-white flex items-center justify-center flex-shrink-0 z-10">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold" style="color:var(--text-primary);">Reported</h4>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted);">Case registered successfully.</p>
+                    </div>
+                </div>
+
+                <!-- Under Review -->
+                <div class="flex gap-4 relative">
+                    <div class="w-6.5 h-6.5 rounded-full flex items-center justify-center flex-shrink-0 z-10
+                        {% if complaint.status in ['Under Review', 'In Progress', 'Resolved'] %} bg-success text-white
+                        {% elif complaint.status == 'Pending' %} bg-primary/20 text-primary ring-4 ring-primary/10
+                        {% else %} text-slate-400 {% endif %}" {% if complaint.status not in ['Under Review', 'In Progress', 'Resolved'] and complaint.status != 'Pending' %}style="background:var(--border);"{% endif %}>
+                        {% if complaint.status in ['Under Review', 'In Progress', 'Resolved'] %}<i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        {% else %}<span class="w-2 h-2 rounded-full bg-current"></span>{% endif %}
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold" style="color:var(--text-primary);">{{ _('under_review') }}</h4>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted);">Officials review category and scope.</p>
+                    </div>
+                </div>
+
+                <!-- In Progress -->
+                <div class="flex gap-4 relative">
+                    <div class="w-6.5 h-6.5 rounded-full flex items-center justify-center flex-shrink-0 z-10
+                        {% if complaint.status in ['In Progress', 'Resolved'] %} bg-success text-white
+                        {% elif complaint.status == 'Under Review' %} bg-primary/20 text-primary ring-4 ring-primary/10
+                        {% else %} text-slate-400 {% endif %}" {% if complaint.status not in ['In Progress', 'Resolved'] and complaint.status != 'Under Review' %}style="background:var(--border);"{% endif %}>
+                        {% if complaint.status in ['In Progress', 'Resolved'] %}<i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        {% else %}<span class="w-2 h-2 rounded-full bg-current"></span>{% endif %}
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold" style="color:var(--text-primary);">{{ _('in_progress') }}</h4>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted);">Corrective physical repairs active.</p>
+                    </div>
+                </div>
+
+                <!-- Resolved -->
+                <div class="flex gap-4 relative">
+                    <div class="w-6.5 h-6.5 rounded-full flex items-center justify-center flex-shrink-0 z-10
+                        {% if complaint.status == 'Resolved' %} bg-success text-white
+                        {% elif complaint.status == 'In Progress' %} bg-primary/20 text-primary ring-4 ring-primary/10
+                        {% else %} text-slate-400 {% endif %}" {% if complaint.status != 'Resolved' and complaint.status != 'In Progress' %}style="background:var(--border);"{% endif %}>
+                        {% if complaint.status == 'Resolved' %}<i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        {% else %}<span class="w-2 h-2 rounded-full bg-current"></span>{% endif %}
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold" style="color:var(--text-primary);">{{ _('resolved') }}</h4>
+                        <p class="text-xs mt-0.5" style="color:var(--text-muted);">Work completed with official proof.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trust Ledger Updates and Discussion Card -->
+        <div class="rounded-2xl border p-6 flex flex-col h-[400px]" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-base font-bold mb-4 pb-2 border-b flex items-center gap-2 flex-shrink-0" style="color:var(--text-primary);border-color:var(--border);">
+                <i data-lucide="message-square" class="w-5 h-5 text-primary"></i> {{ _('timeline_discussion') }}
+            </h3>
+            
+            <!-- Messages Feed (Scrollable) -->
+            <div class="flex-1 overflow-y-auto space-y-3.5 mb-4 pr-1 scrollbar-thin" id="comments-box">
+                {% for update in updates %}
+                    <div class="flex flex-col gap-1.5 p-3 rounded-xl border
+                        {% if update.author_role == 'admin' %} border-primary/20 {% else %} {% endif %}" style="background:{% if update.author_role == 'admin' %}rgba(139,92,246,0.05){% else %}var(--bg-input){% endif %};{% if update.author_role != 'admin' %}border-color:var(--border);{% endif %}">
+                        
+                        <div class="flex items-center justify-between text-[11px] font-semibold" style="color:var(--text-muted);">
+                            <span class="flex items-center gap-1.5">
+                                <span class="{% if update.author_role == 'admin' %}text-primary{% endif %} font-bold" {% if update.author_role != 'admin' %}style="color:var(--text-primary);"{% endif %}>{{ update.author_name }}</span>
+                                <span class="text-[10px] capitalize" style="color:var(--text-muted);">({{ update.author_role }})</span>
+                            </span>
+                            <span>{{ update.created_at[11:16] }}</span>
+                        </div>
+                        
+                        {% if update.status_from or update.status_to %}
+                            <div class="text-[10px] font-bold text-primary flex items-center gap-1">
+                                <i data-lucide="git-commit" class="w-3 h-3"></i>
+                                {% if update.status_from %}
+                                    {{ _(update.status_from|lower|replace(' ', '_')) }} <i data-lucide="arrow-right" class="w-2.5 h-2.5 inline mx-0.5"></i> {{ _(update.status_to|lower|replace(' ', '_')) }}
+                                {% else %}
+                                    Initialized: {{ _(update.status_to|lower|replace(' ', '_')) }}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        {% if update.message %}
+                            <p class="text-xs whitespace-pre-line leading-relaxed" style="color:var(--text-secondary);">{{ update.message }}</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="h-full flex flex-col items-center justify-center text-center gap-2" style="color:var(--text-muted);">
+                        <i data-lucide="messages-square" class="w-8 h-8"></i>
+                        <p class="text-xs font-medium">No comments or updates yet.</p>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Message Input Form -->
+            <form action="/complaint/{{ complaint.id }}/comment" method="POST" class="flex gap-2 flex-shrink-0">
+                <input type="text" name="comment" required autocomplete="off"
+                    class="block w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                    placeholder="Type a message or ask a question...">
+                <button type="submit" class="text-white px-3.5 py-2 rounded-xl text-xs font-semibold btn-brand transition-colors flex items-center justify-center">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                </button>
+            </form>
         </div>
 
     </div>
@@ -300,11 +471,139 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Leaflet Map JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // Automatically scroll discussion/chat box to the bottom on load
+    // Auto-scroll comments thread to bottom
     const commentsBox = document.getElementById('comments-box');
-    if (commentsBox) {
-        commentsBox.scrollTop = commentsBox.scrollHeight;
+    if (commentsBox) commentsBox.scrollTop = commentsBox.scrollHeight;
+
+    // Leaflet map initialization
+    let detailMap;
+    const mapEl = document.getElementById('detail-map');
+    const lat = mapEl.dataset.latitude ? parseFloat(mapEl.dataset.latitude) : null;
+    const lng = mapEl.dataset.longitude ? parseFloat(mapEl.dataset.longitude) : null;
+    const locationStr = "{{ complaint.location }}";
+
+    function initDetailMap() {
+        detailMap = L.map('detail-map').setView([20.5937, 78.9629], 5);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(detailMap);
+
+        if (lat !== null && lng !== null) {
+            // Direct coordinates from database
+            detailMap.setView([lat, lng], 16);
+            L.marker([lat, lng]).addTo(detailMap)
+                .bindPopup(`<b>${locationStr}</b>`)
+                .openPopup();
+        } else {
+            // No coordinates - client geocode fallback with OpenStreetMap Nominatim
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationStr)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const hitLat = parseFloat(data[0].lat);
+                        const hitLng = parseFloat(data[0].lon);
+                        detailMap.setView([hitLat, hitLng], 15);
+                        L.marker([hitLat, hitLng]).addTo(detailMap)
+                            .bindPopup(`<b>${locationStr}</b><br><span class="text-[9px]" style="color:var(--text-muted);">Approx. geocoded match</span>`)
+                            .openPopup();
+                    } else {
+                        // Center of India fallback
+                        detailMap.setView([20.5937, 78.9629], 4);
+                    }
+                })
+                .catch(() => {
+                    detailMap.setView([20.5937, 78.9629], 4);
+                });
+        }
     }
+
+    // Interactive Image Compare Slider
+    function initImageCompareSlider() {
+        const container = document.querySelector('.compare-container');
+        if (!container) return;
+
+        const overlay = document.getElementById('slider-overlay');
+        const handle = document.getElementById('slider-line');
+        const img = document.getElementById('slider-img');
+
+        function setSliderPosition(x) {
+            const rect = container.getBoundingClientRect();
+            let position = ((x - rect.left) / rect.width) * 100;
+            
+            // Constrain
+            if (position < 0) position = 0;
+            if (position > 100) position = 100;
+
+            overlay.style.width = `${position}%`;
+            handle.style.left = `${position}%`;
+        }
+
+        // Mouse Events
+        container.addEventListener('mousemove', function(e) {
+            setSliderPosition(e.clientX);
+        });
+
+        // Touch Events
+        container.addEventListener('touchmove', function(e) {
+            if (e.touches && e.touches.length > 0) {
+                setSliderPosition(e.touches[0].clientX);
+            }
+        });
+        
+        // Initial setup
+        setSliderPosition(container.getBoundingClientRect().width / 2);
+    }
+
+    // Admin proof upload fields toggling
+    function initAdminProofToggle() {
+        const statusSelect = document.getElementById('admin-status-select');
+        const proofGroup = document.getElementById('resolution-proof-group');
+        const proofInput = document.getElementById('resolution_proof_input');
+        const proofPreview = document.getElementById('proof-preview');
+        const proofPrompt = document.getElementById('proof-upload-prompt');
+
+        if (!statusSelect || !proofGroup) return;
+
+        function toggleProofVisibility() {
+            const isResolved = statusSelect.value === 'Resolved';
+            if (isResolved) {
+                proofGroup.classList.remove('hidden');
+                proofInput.setAttribute('required', 'required');
+            } else {
+                proofGroup.classList.add('hidden');
+                proofInput.removeAttribute('required');
+            }
+        }
+
+        statusSelect.addEventListener('change', toggleProofVisibility);
+        toggleProofVisibility(); // run once initial
+
+        // image preview logic
+        if (proofInput) {
+            proofInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        proofPreview.src = e.target.result;
+                        proofPreview.classList.remove('hidden');
+                        proofPrompt.classList.add('hidden');
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initDetailMap();
+        initImageCompareSlider();
+        initAdminProofToggle();
+    });
 </script>
 {% endblock %}

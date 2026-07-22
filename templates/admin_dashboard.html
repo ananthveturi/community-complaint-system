@@ -1,80 +1,78 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Control Panel - Community Complaint Management System {% endblock %}
+{% block title %}Command Center - CCMS{% endblock %}
 
 {% block content %}
-<div class="glass-container" id="admin-charts-container">
-    <!-- Header -->
-    <div style="margin-bottom: 2rem;">
-        <h1 style="font-weight: 700;">Admin Control Panel</h1>
-        <p style="color: var(--text-secondary);">Municipal statistics, analytical charts, and complaint assignment workflow</p>
+<div id="admin-charts-container">
+    <div class="mb-8">
+        <h1 class="text-2xl font-extrabold tracking-tight" style="color:var(--text-primary);">{{ _('service_operations') }}</h1>
+        <p class="text-sm mt-1" style="color:var(--text-muted);">{{ _('prioritize_active') }}</p>
     </div>
 
-    <!-- Summary Metrics -->
-    <div class="stats-summary" style="margin-bottom: 2.5rem;">
-        <div class="stat-card">
-            <span class="stat-lbl">Total Registered</span>
-            <div class="stat-val" style="color: var(--primary);">{{ stats.total_complaints }}</div>
+    <!-- KPI Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div class="rounded-2xl border p-5 kpi-violet" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">{{ _('total_filed') }}</h3>
+            <div class="text-3xl font-extrabold" style="color:var(--text-primary);">{{ stats.total_complaints }}</div>
         </div>
-        <div class="stat-card">
-            <span class="stat-lbl">Unresolved (Active)</span>
-            <div class="stat-val" style="color: var(--warning);">
-                {{ stats.status_counts.Pending + stats.status_counts['Under Review'] + stats.status_counts['In Progress'] }}
-            </div>
+        <div class="rounded-2xl border p-5 kpi-yellow" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">{{ _('active_load') }}</h3>
+            <div class="text-3xl font-extrabold text-brand-yellow">{{ stats.status_counts.Pending + stats.status_counts['Under Review'] + stats.status_counts['In Progress'] }}</div>
         </div>
-        <div class="stat-card">
-            <span class="stat-lbl">Resolved Issues</span>
-            <div class="stat-val" style="color: var(--success);">{{ stats.status_counts.Resolved }}</div>
+        <div class="rounded-2xl border p-5 kpi-green" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">{{ _('verified_resolved') }}</h3>
+            <div class="text-3xl font-extrabold text-success">{{ stats.status_counts.Resolved }}</div>
         </div>
-        <div class="stat-card">
-            <span class="stat-lbl">Avg Resolution</span>
-            <div class="stat-val" style="color: var(--info); font-size: 1.6rem; padding: 0.3rem 0;">{{ stats.avg_resolution_time }}</div>
+        <div class="rounded-2xl border p-5 kpi-cyan" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">{{ _('avg_closure') }}</h3>
+            <div class="text-2xl font-extrabold mt-1" style="color:var(--text-primary);">{{ stats.avg_resolution_time }}</div>
         </div>
-        <div class="stat-card">
-            <span class="stat-lbl">Satisfaction Index</span>
-            <div class="stat-val" style="color: #f59e0b; font-size: 1.6rem; padding: 0.3rem 0;">
-                {{ stats.avg_feedback_rating }} {% if stats.avg_feedback_rating is number %}★{% endif %}
-            </div>
+        <div class="rounded-2xl border p-5 kpi-pink" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <h3 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--text-muted);">{{ _('avg_satisfaction') }}</h3>
+            <div class="text-3xl font-extrabold" style="color:var(--text-primary);">{{ stats.avg_feedback_rating }}</div>
         </div>
     </div>
 
-    <!-- Charts Grid -->
-    <div class="admin-charts-grid">
-        <div class="glass-card no-hover">
-            <h3 style="margin-bottom: 1.5rem; font-weight: 600; text-align: center;">Grievances by Category</h3>
-            <div class="chart-container">
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <div class="mb-4">
+                <h2 class="text-lg font-bold" style="color:var(--text-primary);">{{ _('cases_by_category') }}</h2>
+            </div>
+            <div class="relative h-64">
                 <canvas id="categoryChart"></canvas>
             </div>
         </div>
-        
-        <div class="glass-card no-hover">
-            <h3 style="margin-bottom: 1.5rem; font-weight: 600; text-align: center;">Grievance Lifecycle Volume</h3>
-            <div class="chart-container">
+        <div class="rounded-2xl border p-6" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <div class="mb-4">
+                <h2 class="text-lg font-bold" style="color:var(--text-primary);">{{ _('status_volume') }}</h2>
+            </div>
+            <div class="relative h-64">
                 <canvas id="statusChart"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- Filters Panel -->
-    <div class="glass-card no-hover" style="margin-bottom: 2rem; padding: 1.5rem;">
-        <h3 style="margin-bottom: 1rem; font-weight: 600;">🔍 Filter & Search Complaints</h3>
-        
-        <form action="/admin/dashboard" method="GET" class="admin-filters">
-            <div style="flex: 1; min-width: 180px;">
-                <label for="filter-status" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Status</label>
-                <select id="filter-status" name="status" class="form-control" style="padding: 0.5rem 0.75rem;">
+    <!-- Filters -->
+    <div class="rounded-2xl border p-6 mb-8" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+        <div class="mb-4">
+            <h2 class="text-lg font-bold" style="color:var(--text-primary);">{{ _('search_filter') }}</h2>
+        </div>
+        <form action="/admin/dashboard" method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div>
+                <label for="filter-status" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">{{ _('status') }}</label>
+                <select id="filter-status" name="status" class="block w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
                     <option value="">All Statuses</option>
-                    <option value="Pending" {% if active_filters.status == 'Pending' %}selected{% endif %}>Pending</option>
-                    <option value="Under Review" {% if active_filters.status == 'Under Review' %}selected{% endif %}>Under Review</option>
-                    <option value="In Progress" {% if active_filters.status == 'In Progress' %}selected{% endif %}>In Progress</option>
-                    <option value="Resolved" {% if active_filters.status == 'Resolved' %}selected{% endif %}>Resolved</option>
-                    <option value="Rejected" {% if active_filters.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                    <option value="Pending" {% if active_filters.status == 'Pending' %}selected{% endif %}>{{ _('pending') }}</option>
+                    <option value="Under Review" {% if active_filters.status == 'Under Review' %}selected{% endif %}>{{ _('under_review') }}</option>
+                    <option value="In Progress" {% if active_filters.status == 'In Progress' %}selected{% endif %}>{{ _('in_progress') }}</option>
+                    <option value="Resolved" {% if active_filters.status == 'Resolved' %}selected{% endif %}>{{ _('resolved') }}</option>
+                    <option value="Rejected" {% if active_filters.status == 'Rejected' %}selected{% endif %}>{{ _('rejected') }}</option>
                 </select>
             </div>
-            
-            <div style="flex: 1; min-width: 180px;">
-                <label for="filter-category" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Category</label>
-                <select id="filter-category" name="category" class="form-control" style="padding: 0.5rem 0.75rem;">
+            <div>
+                <label for="filter-category" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">{{ _('category') }}</label>
+                <select id="filter-category" name="category" class="block w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
                     <option value="">All Categories</option>
                     <option value="Roads & Traffic" {% if active_filters.category == 'Roads & Traffic' %}selected{% endif %}>Roads & Traffic</option>
                     <option value="Sanitation & Waste" {% if active_filters.category == 'Sanitation & Waste' %}selected{% endif %}>Sanitation & Waste</option>
@@ -82,174 +80,183 @@
                     <option value="Electricity & Power" {% if active_filters.category == 'Electricity & Power' %}selected{% endif %}>Electricity & Power</option>
                     <option value="Public Safety" {% if active_filters.category == 'Public Safety' %}selected{% endif %}>Public Safety</option>
                     <option value="Parks & Recreation" {% if active_filters.category == 'Parks & Recreation' %}selected{% endif %}>Parks & Recreation</option>
-                    <option value="Other" {% if active_filters.category == 'Other' %}selected{% endif %}>Other Issues</option>
+                    <option value="Other" {% if active_filters.category == 'Other' %}selected{% endif %}>Other</option>
                 </select>
             </div>
-
-            <div style="flex: 1; min-width: 180px;">
-                <label for="filter-dept" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Assigned Dept</label>
-                <input type="text" id="filter-dept" name="department" class="form-control" style="padding: 0.5rem 0.75rem;" placeholder="e.g. Roads, Sanitation" value="{{ active_filters.department or '' }}">
+            <div>
+                <label for="filter-dept" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">{{ _('department') }}</label>
+                <input type="text" id="filter-dept" name="department" class="block w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);" placeholder="Public Works..." value="{{ active_filters.department or '' }}">
             </div>
-
-            <div style="flex: 2; min-width: 250px;">
-                <label for="filter-search" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Search Keywords</label>
-                <input type="text" id="filter-search" name="search" class="form-control" style="padding: 0.5rem 0.75rem;" placeholder="Search title, description, location, citizen name..." value="{{ active_filters.search or '' }}">
-            </div>
-
-            <div style="display: flex; gap: 0.5rem;">
-                <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.2rem;">Apply Filters</button>
-                <a href="/admin/dashboard" class="btn btn-secondary" style="padding: 0.6rem 1.2rem;">Reset</a>
+            <div class="lg:col-span-2">
+                <label for="filter-search" class="block text-xs font-semibold uppercase tracking-wider mb-1.5" style="color:var(--text-muted);">Keyword</label>
+                <div class="flex gap-2">
+                    <input type="text" id="filter-search" name="search" class="block w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);" placeholder="Search title, description..." value="{{ active_filters.search or '' }}">
+                    <button type="submit" class="text-white px-4 py-2 rounded-xl text-sm font-semibold btn-brand focus:ring-2 focus:ring-primary/20 outline-none whitespace-nowrap">{{ _('apply') }}</button>
+                    <a href="/admin/dashboard" class="px-4 py-2 rounded-xl text-sm font-medium border transition-colors whitespace-nowrap" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">{{ _('reset') }}</a>
+                </div>
             </div>
         </form>
     </div>
 
-    <!-- Tabs Header -->
-    <div class="tabs-header" style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--bg-card-border); padding-bottom: 0.75rem;">
-        <button class="btn btn-secondary" id="tab-btn-complaints" onclick="switchAdminTab('complaints')" style="border-radius: var(--border-radius-sm); font-size: 0.95rem; padding: 0.5rem 1.25rem; background: var(--primary-light); color: var(--primary); border-color: var(--primary-glow);">📋 Complaints Register ({{ complaints|length }})</button>
-        <button class="btn btn-secondary" id="tab-btn-users" onclick="switchAdminTab('users')" style="border-radius: var(--border-radius-sm); font-size: 0.95rem; padding: 0.5rem 1.25rem;">👥 Registered Accounts ({{ users|length }})</button>
-    </div>
-
-    <!-- Tab 1: Complaints Register -->
-    <div id="tab-content-complaints" class="admin-tab-content">
-        <!-- Complaints Listing -->
-        <div class="glass-card no-hover" style="padding: 1.5rem;">
-            <h3 style="margin-bottom: 1rem; font-weight: 600;">Complaints Register ({{ complaints|length }} results)</h3>
-            
-            {% if complaints %}
-                <div class="table-wrapper">
-                    <table class="glass-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Citizen</th>
-                                <th>Title</th>
-                                <th>Category</th>
-                                <th>Location</th>
-                                <th>Assigned Dept</th>
-                                <th>Status</th>
-                                <th>Filed Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for complaint in complaints %}
-                                <tr>
-                                    <td style="font-weight: 600;">#{{ complaint.id }}</td>
-                                    <td>{{ complaint.citizen_name }}</td>
-                                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        <strong>{{ complaint.title }}</strong>
-                                    </td>
-                                    <td>{{ complaint.category }}</td>
-                                    <td>{{ complaint.location }}</td>
-                                    <td>
-                                        {% if complaint.department %}
-                                            <span style="font-size: 0.85rem; font-weight: 500; color: var(--primary);">{{ complaint.department }}</span>
-                                        {% else %}
-                                            <span style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Unassigned</span>
+    <!-- Cases Table -->
+    <div class="rounded-2xl border overflow-hidden mb-8" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+        <div class="px-6 py-5 border-b flex items-center justify-between" style="border-color:var(--border);">
+            <h2 class="text-lg font-bold" style="color:var(--text-primary);">{{ _('cases_requiring_action') }}</h2>
+            <span class="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-md border border-primary/20">{{ complaints|length }} cases</span>
+        </div>
+        
+        {% if complaints %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b text-xs uppercase tracking-wider" style="background:var(--bg-input);border-color:var(--border);color:var(--text-muted);">
+                            <th class="px-6 py-3 font-semibold">ID / Issue</th>
+                            <th class="px-6 py-3 font-semibold">Citizen</th>
+                            <th class="px-6 py-3 font-semibold">{{ _('category') }} / {{ _('department') }}</th>
+                            <th class="px-6 py-3 font-semibold">{{ _('location') }}</th>
+                            <th class="px-6 py-3 font-semibold">{{ _('status') }} / {{ _('priority') }}</th>
+                            <th class="px-6 py-3 font-semibold">{{ _('filed') }}</th>
+                            <th class="px-6 py-3 font-semibold text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" style="--tw-divide-opacity:1;border-color:var(--border);">
+                        {% for complaint in complaints %}
+                            <tr class="hover:bg-[var(--bg-card-hover)] transition-colors group">
+                                <td class="px-6 py-4 align-top">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-mono" style="color:var(--text-muted);">#{{ complaint.id }}</span>
+                                        <span class="font-semibold group-hover:text-primary transition-colors" style="color:var(--text-primary);">{{ complaint.title }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top text-sm" style="color:var(--text-secondary);">{{ complaint.citizen_name }}</td>
+                                <td class="px-6 py-4 align-top">
+                                    <div class="text-sm font-medium" style="color:var(--text-primary);">{{ complaint.category }}</div>
+                                    <div class="text-xs" style="color:var(--text-muted);">{{ complaint.department or 'Unassigned' }}</div>
+                                </td>
+                                <td class="px-6 py-4 align-top">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm line-clamp-1 max-w-[150px]" style="color:var(--text-secondary);">{{ complaint.location }}</span>
+                                        <a target="_blank" rel="noopener" 
+                                           href="https://www.google.com/maps/search/?api=1&query={% if complaint.latitude and complaint.longitude %}{{ complaint.latitude }},{{ complaint.longitude }}{% else %}{{ complaint.location|urlencode }}{% endif %}"
+                                           class="hover:text-primary transition-colors" style="color:var(--text-muted);" title="View on Map">
+                                            <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top">
+                                    <div class="flex flex-col gap-2 items-start">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider border
+                                            {% if complaint.status == 'Pending' %} bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/30
+                                            {% elif complaint.status == 'Under Review' %} bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/30
+                                            {% elif complaint.status == 'In Progress' %} bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700/30
+                                            {% elif complaint.status == 'Resolved' %} bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700/30
+                                            {% else %} bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700/30 {% endif %}">
+                                            {% if complaint.status == 'Pending' %}{{ _('pending') }}
+                                            {% elif complaint.status == 'Under Review' %}{{ _('under_review') }}
+                                            {% elif complaint.status == 'In Progress' %}{{ _('in_progress') }}
+                                            {% elif complaint.status == 'Resolved' %}{{ _('resolved') }}
+                                            {% else %}{{ _('rejected') }}{% endif %}
+                                        </span>
+                                        {% if complaint.ai_priority %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border
+                                                {% if complaint.ai_priority == 'High' %} bg-red-50 dark:bg-red-900/20 text-danger border-red-200 dark:border-red-700/30
+                                                {% elif complaint.ai_priority == 'Medium' %} bg-amber-50 dark:bg-amber-900/20 text-warning border-amber-200 dark:border-amber-700/30
+                                                {% else %} bg-green-50 dark:bg-green-900/20 text-success border-green-200 dark:border-green-700/30 {% endif %}">
+                                                AI: {{ complaint.ai_priority }}
+                                            </span>
                                         {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-{{ 'pending' if complaint.status == 'Pending' else 'review' if complaint.status == 'Under Review' else 'progress' if complaint.status == 'In Progress' else 'resolved' if complaint.status == 'Resolved' else 'rejected' }}" style="font-size: 0.75rem;">
-                                            {{ complaint.status }}
-                                        </span>
-                                    </td>
-                                    <td style="font-size: 0.85rem; color: var(--text-muted);">{{ complaint.created_at[:10] }}</td>
-                                    <td>
-                                        <a href="/complaint/{{ complaint.id }}" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-radius: var(--border-radius-sm);">Manage</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top text-sm" style="color:var(--text-secondary);">{{ complaint.created_at[:10] }}</td>
+                                <td class="px-6 py-4 align-top text-right">
+                                    <a href="/complaint/{{ complaint.id }}" class="inline-flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-medium hover:border-primary hover:text-primary transition-all" style="background:var(--bg-card);border-color:var(--border);color:var(--text-secondary);">
+                                        Manage <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center">
+                <div class="w-12 h-12 mx-auto rounded-xl flex items-center justify-center mb-3" style="background:var(--bg-input);color:var(--text-muted);">
+                    <i data-lucide="search-x" class="w-6 h-6"></i>
                 </div>
-            {% else %}
-                <div style="text-align: center; color: var(--text-muted); padding: 3rem 0;">
-                    No complaints matching filters found.
-                </div>
-            {% endif %}
-        </div>
+                <h3 class="text-sm font-semibold mb-1" style="color:var(--text-primary);">No cases found</h3>
+                <p class="text-sm" style="color:var(--text-muted);">Try adjusting your filters to find what you're looking for.</p>
+            </div>
+        {% endif %}
     </div>
 
-    <!-- Tab 2: Registered Accounts -->
-    <div id="tab-content-users" class="admin-tab-content" style="display: none;">
-        <!-- Registered Users Listing -->
-        <div class="glass-card no-hover" style="padding: 1.5rem;">
-            <h3 style="margin-bottom: 1rem; font-weight: 600;">Registered Citizen & Staff Accounts</h3>
-            
-            {% if users %}
-                <div class="table-wrapper">
-                    <table class="glass-table">
-                        <thead>
-                            <tr>
-                                <th>User ID</th>
-                                <th>Full Name</th>
-                                <th>Username</th>
-                                <th>Email Address</th>
-                                <th>Phone Number</th>
-                                <th>Access Role</th>
-                                <th>Registration Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for u in users %}
-                                <tr>
-                                    <td style="font-weight: 600;">#{{ u.id }}</td>
-                                    <td><strong>{{ u.full_name }}</strong></td>
-                                    <td><code>{{ u.username }}</code></td>
-                                    <td>{{ u.email }}</td>
-                                    <td>{{ u.phone or '--' }}</td>
-                                    <td>
-                                        <span class="badge badge-{{ 'resolved' if u.role == 'admin' else 'progress' }}" style="font-size: 0.75rem;">
-                                            {{ u.role }}
-                                        </span>
-                                    </td>
-                                    <td style="font-size: 0.85rem; color: var(--text-muted);">{{ u.created_at[:10] }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div style="text-align: center; color: var(--text-muted); padding: 3rem 0;">
-                    No user accounts found.
-                </div>
-            {% endif %}
+    <!-- Users Table -->
+    <div class="rounded-2xl border overflow-hidden" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+        <div class="px-6 py-5 border-b flex items-center justify-between" style="border-color:var(--border);">
+            <h2 class="text-lg font-bold" style="color:var(--text-primary);">{{ _('registered_accounts') }}</h2>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md border" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">{{ users|length }} users</span>
         </div>
+        
+        {% if users %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b text-xs uppercase tracking-wider" style="background:var(--bg-input);border-color:var(--border);color:var(--text-muted);">
+                            <th class="px-6 py-3 font-semibold">User</th>
+                            <th class="px-6 py-3 font-semibold">Contact</th>
+                            <th class="px-6 py-3 font-semibold">{{ _('role') }}</th>
+                            <th class="px-6 py-3 font-semibold text-right">{{ _('joined') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" style="border-color:var(--border);">
+                        {% for u in users %}
+                            <tr class="hover:bg-[var(--bg-card-hover)] transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-violet to-brand-cyan text-white flex items-center justify-center font-bold text-xs">
+                                            {{ u.full_name[0] }}
+                                        </div>
+                                        <div>
+                                            <div class="font-medium" style="color:var(--text-primary);">{{ u.full_name }}</div>
+                                            <div class="text-xs font-mono" style="color:var(--text-muted);">@{{ u.username }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm" style="color:var(--text-secondary);">
+                                    <div>{{ u.email }}</div>
+                                    <div class="text-xs" style="color:var(--text-muted);">{{ u.phone or 'No phone' }}</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider border
+                                        {% if u.role == 'admin' %} bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/30
+                                        {% else %} bg-slate-100 dark:bg-slate-700/30 border-slate-200 dark:border-slate-600/30 {% endif %}" style="{% if u.role != 'admin' %}color:var(--text-secondary);{% endif %}">
+                                        {{ u.role }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-right" style="color:var(--text-secondary);">{{ u.created_at[:10] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<!-- Include Chart.js from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<!-- Configure charts for the premium palette -->
 <script>
-    function switchAdminTab(tab) {
-        // Toggle Active Content Panel
-        document.getElementById('tab-content-complaints').style.display = tab === 'complaints' ? 'block' : 'none';
-        document.getElementById('tab-content-users').style.display = tab === 'users' ? 'block' : 'none';
-        
-        // Toggle Active Button Styling
-        const compBtn = document.getElementById('tab-btn-complaints');
-        const userBtn = document.getElementById('tab-btn-users');
-        
-        if (tab === 'complaints') {
-            compBtn.style.background = 'var(--primary-light)';
-            compBtn.style.color = 'var(--primary)';
-            compBtn.style.borderColor = 'var(--primary-glow)';
-            
-            userBtn.style.background = 'var(--bg-card-border)';
-            userBtn.style.color = 'var(--text-primary)';
-            userBtn.style.borderColor = 'var(--bg-card-border)';
-        } else {
-            userBtn.style.background = 'var(--primary-light)';
-            userBtn.style.color = 'var(--primary)';
-            userBtn.style.borderColor = 'var(--primary-glow)';
-            
-            compBtn.style.background = 'var(--bg-card-border)';
-            compBtn.style.color = 'var(--text-primary)';
-            compBtn.style.borderColor = 'var(--bg-card-border)';
-        }
-    }
+    const isDarkNow = document.documentElement.classList.contains('dark');
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = isDarkNow ? '#CBD5E1' : '#64748B';
+    Chart.defaults.scale.grid.color = isDarkNow ? 'rgba(255,255,255,0.05)' : '#F1F5F9';
+    Chart.defaults.scale.grid.borderColor = 'transparent';
+    Chart.defaults.plugins.tooltip.backgroundColor = isDarkNow ? '#334155' : '#0F172A';
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    Chart.defaults.elements.bar.borderRadius = 6;
+    Chart.defaults.elements.line.tension = 0.4;
 </script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 {% endblock %}

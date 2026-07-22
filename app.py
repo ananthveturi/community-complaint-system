@@ -4,6 +4,8 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 import database
+import classifier
+from translations import TRANSLATIONS
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-fallback-change-me-in-production')
@@ -28,6 +30,7 @@ db_exists = os.path.exists(database.DB_PATH)
 if not db_exists:
     print("Database not found. Initializing database schema...")
     database.init_db()
+database.ensure_schema()
 
 # Auto-seed database if there are no users present
 try:
@@ -44,9 +47,27 @@ try:
 except Exception as e:
     print(f"Error during automatic database initialization/seeding: {e}")
 
+try:
+    import seed
+    seed.create_mock_images()
+except Exception as e:
+    print(f"Unable to refresh demonstration evidence images: {e}")
+
 def allowed_file(filename):
     """Check if uploaded file has a secure permitted extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def parse_coordinate(value, min_value, max_value):
+    """Parse a latitude/longitude value and reject out-of-range coordinates."""
+    if value is None or value == '':
+        return None
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    if parsed < min_value or parsed > max_value:
+        return None
+    return parsed
 
 def save_file(file):
     """Save upload to static/uploads/ with an obfuscated unique filename."""
@@ -59,6 +80,20 @@ def save_file(file):
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_name))
         return unique_name
     return None
+
+@app.context_processor
+def utility_processor():
+    def translate(key):
+        lang = session.get('lang', 'en')
+        lang_dict = TRANSLATIONS.get(lang, TRANSLATIONS['en'])
+        return lang_dict.get(key, TRANSLATIONS['en'].get(key, key))
+    return dict(_=translate)
+
+@app.route('/set-language/<lang>')
+def set_language(lang):
+    if lang in ['en', 'hi', 'te']:
+        session['lang'] = lang
+    return redirect(request.referrer or url_for('index'))
 
 
 # --- Authentication Decorators/Helpers ---
@@ -92,8 +127,18 @@ def role_required(role):
 
 @app.route('/')
 def index():
-    """System Landing page."""
-    return render_template('index.html')
+    """System Landing page with public trust metrics."""
+    try:
+        stats = database.get_dashboard_stats()
+    except Exception:
+        stats = {
+            'total_complaints': 0,
+            'status_counts': {'Pending': 0, 'Under Review': 0, 'In Progress': 0, 'Resolved': 0, 'Rejected': 0},
+            'avg_resolution_time': 'N/A',
+            'avg_feedback_rating': 'No ratings yet',
+            'category_counts': {}
+        }
+    return render_template('index.html', stats=stats)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -178,6 +223,8 @@ def file_complaint():
         category = request.form['category']
         location = request.form['location'].strip()
         description = request.form['description'].strip()
+        latitude = parse_coordinate(request.form.get('latitude'), -90, 90)
+        longitude = parse_coordinate(request.form.get('longitude'), -180, 180)
         image_file = request.files.get('image')
         
         if not title or not category or not location or not description:
@@ -197,9 +244,14 @@ def file_complaint():
             category=category,
             description=description,
             location=location,
-            image_path=image_path
+            image_path=image_path,
+            latitude=latitude,
+            longitude=longitude
         )
         if complaint_id:
+            # Run AI classification and persist predictions
+            ai_category, ai_priority = classifier.predict(title, description)
+            database.save_ai_prediction(complaint_id, ai_category, ai_priority)
             flash("Your complaint has been submitted successfully!", "success")
             return redirect(url_for('citizen_dashboard'))
         else:
@@ -388,7 +440,8 @@ def get_stats_api():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('index.html'), 404
+    stats = database.get_dashboard_stats()
+    return render_template('index.html', stats=stats), 404
 
 @app.errorhandler(500)
 def server_error(e):

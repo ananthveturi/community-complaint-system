@@ -1,90 +1,276 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CCMS - Community Complaint Management System{% endblock %}</title>
+    <title>{% block title %}CCMS - Community Complaint Management{% endblock %}</title>
+    <meta name="description" content="CCMS - A modern community complaint management system with AI-powered classification, transparent resolution tracking, and proof-based closure.">
     
-    <!-- Meta details for SEO -->
-    <meta name="description" content="A digital system to file, track and manage community complaints efficiently for better civic responsiveness.">
-    <meta name="theme-color" content="#4f46e5">
-
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Inline script to block render flash and initialize correct theme early -->
+    <!-- Icons: Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        (function() {
-            const savedTheme = localStorage.getItem('theme');
-            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'light');
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#8B5CF6',
+                        'primary-hover': '#7C3AED',
+                        secondary: '#06B6D4',
+                        accent: '#F472B6',
+                        highlight: '#FBBF24',
+                        success: '#22C55E',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                        brand: {
+                            violet: '#8B5CF6',
+                            cyan: '#06B6D4',
+                            pink: '#F472B6',
+                            yellow: '#FBBF24',
+                        },
+                        surface: {
+                            50:  '#F8FAFC',
+                            100: '#F1F5F9',
+                            200: '#E2E8F0',
+                            700: '#334155',
+                            800: '#1E293B',
+                            900: '#0F172A',
+                        },
+                        border: '#E2E8F0',
+                    },
+                    borderRadius: {
+                        'xl': '12px',
+                        '2xl': '16px',
+                        '3xl': '20px',
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 24px -4px rgba(139,92,246,0.10)',
+                        'card': '0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.06)',
+                        'glow': '0 0 40px -10px rgba(139,92,246,0.20)',
+                        'glow-cyan': '0 0 40px -10px rgba(6,182,212,0.20)',
+                        'glow-pink': '0 0 40px -10px rgba(244,114,182,0.20)',
+                    }
+                }
             }
-        })();
+        }
     </script>
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar" id="main-navbar">
-        <div class="navbar-container">
-            <a href="/" class="logo" id="nav-logo">
-                <span class="logo-icon">🏢</span> CivicConnect
-            </a>
-            
-            <ul class="nav-links">
-                <li><a href="/" id="nav-home">Home</a></li>
-                {% if session.get('user_id') %}
-                    {% if session.get('role') == 'admin' %}
-                        <li><a href="/admin/dashboard" id="nav-admin-dashboard" class="{% if request.path == '/admin/dashboard' %}active{% endif %}">Admin Control</a></li>
-                    {% else %}
-                        <li><a href="/dashboard" id="nav-citizen-dashboard" class="{% if request.path == '/dashboard' %}active{% endif %}">My Dashboard</a></li>
-                        <li><a href="/file-complaint" id="nav-file-complaint" class="{% if request.path == '/file-complaint' %}active{% endif %}">File Complaint</a></li>
-                    {% endif %}
-                    <li><a href="/logout" id="nav-logout">Logout</a></li>
-                    <li style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">
-                        Hi, <strong>{{ session.get('full_name') }}</strong> ({{ session.get('role') }})
-                    </li>
-                {% else %}
-                    <li><a href="/login" id="nav-login" class="{% if request.path == '/login' %}active{% endif %}">Login</a></li>
-                    <li><a href="/register" id="nav-register" class="{% if request.path == '/register' %}active{% endif %}">Register</a></li>
-                {% endif %}
-                <li>
-                    <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle dark/light theme" type="button">
-                        🌙
-                    </button>
-                </li>
-            </ul>
-        </div>
-    </nav>
+<body class="min-h-screen flex flex-col font-sans bg-[var(--bg-body)] text-[var(--text-primary)] selection:bg-primary/30 selection:text-primary">
 
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="alert-container" id="system-alerts">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category if category != 'error' else 'danger' }}" role="alert">
-                        <span>{{ message }}</span>
-                        <button class="alert-close" aria-label="Close message">&times;</button>
+    {% if request.path in ['/', '/login', '/register'] %}
+        <!-- PUBLIC LAYOUT (No Sidebar) -->
+        <nav class="sticky top-0 z-50 border-b" style="background:var(--bg-nav);border-color:var(--border);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    <a href="/" class="flex items-center gap-2.5 group">
+                        <div class="w-9 h-9 bg-gradient-to-br from-brand-violet to-brand-cyan text-white rounded-xl flex items-center justify-center font-extrabold text-lg shadow-glow group-hover:shadow-glow transition-shadow">C</div>
+                        <span class="font-extrabold text-xl tracking-tight" style="color:var(--text-primary);">CCMS</span>
+                    </a>
+                    <div class="flex items-center gap-3">
+                        <!-- Language Selector -->
+                        <select onchange="window.location.href='/set-language/' + this.value" class="text-xs font-medium rounded-xl px-2.5 py-1.5 outline-none cursor-pointer border" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);" >
+                            <option value="en" {% if session.get('lang', 'en') == 'en' %}selected{% endif %}>English</option>
+                            <option value="te" {% if session.get('lang', 'en') == 'te' %}selected{% endif %}>తెలుగు</option>
+                            <option value="hi" {% if session.get('lang', 'en') == 'hi' %}selected{% endif %}>हिंदी</option>
+                        </select>
+                        <!-- Theme Toggle -->
+                        <button id="themeToggleBtn" aria-label="Toggle dark mode">
+                            <i data-lucide="moon" class="w-5 h-5 theme-icon-dark"></i>
+                            <i data-lucide="sun" class="w-5 h-5 theme-icon-light hidden"></i>
+                        </button>
+                        {% if session.get('user_id') %}
+                            <a href="{% if session.get('role') == 'admin' %}/admin/dashboard{% else %}/dashboard{% endif %}" class="text-sm font-semibold hover:text-primary transition-colors" style="color:var(--text-secondary);">{{ _('dashboard') }}</a>
+                        {% else %}
+                            <a href="/login" class="text-sm font-semibold hover:text-primary transition-colors" style="color:var(--text-secondary);">{{ _('login') }}</a>
+                            <a href="/register" class="text-sm font-medium text-white px-4 py-2 rounded-xl btn-brand">{{ _('get_started') }}</a>
+                        {% endif %}
                     </div>
-                {% endfor %}
+                </div>
             </div>
-        {% endif %}
-    {% endwith %}
+        </nav>
+        
+        <!-- Alerts -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="p-4 mb-4 text-sm rounded-xl border flex items-start gap-3 animate-fade-in
+                            {{ 'bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/40' if category == 'error' else 'bg-violet-50 dark:bg-violet-950/30 text-violet-800 dark:text-violet-300 border-violet-200 dark:border-violet-800/40' }}">
+                            <i data-lucide="{{ 'alert-circle' if category == 'error' else 'info' }}" class="w-5 h-5 flex-shrink-0"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    {% else %}
+        <!-- APP LAYOUT (Sidebar + Navbar) -->
+        <div class="flex h-screen overflow-hidden" style="background:var(--bg-body);">
+            
+            <!-- Sidebar -->
+            <aside class="w-64 flex-shrink-0 flex flex-col hidden md:flex z-20 border-r" style="background:var(--bg-sidebar);border-color:var(--border);">
+                <div class="h-16 flex items-center px-6 border-b" style="border-color:var(--border);">
+                    <a href="/" class="flex items-center gap-2.5 group">
+                        <div class="w-9 h-9 bg-gradient-to-br from-brand-violet to-brand-cyan text-white rounded-xl flex items-center justify-center font-extrabold text-lg shadow-glow group-hover:shadow-glow transition-shadow">C</div>
+                        <span class="font-extrabold text-xl tracking-tight" style="color:var(--text-primary);">CCMS</span>
+                    </a>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1 scrollbar-thin">
+                    {% if session.get('role') == 'admin' %}
+                        <a href="/admin/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path == '/admin/dashboard' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/admin/dashboard' %}color:var(--text-secondary);{% endif %}">
+                            <i data-lucide="bar-chart-2" class="w-5 h-5"></i> {{ _('analytics') }}
+                        </a>
+                    {% else %}
+                        <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path == '/dashboard' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/dashboard' %}color:var(--text-secondary);{% endif %}">
+                            <i data-lucide="layout-dashboard" class="w-5 h-5"></i> {{ _('dashboard') }}
+                        </a>
+                        <a href="/file-complaint" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path == '/file-complaint' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/file-complaint' %}color:var(--text-secondary);{% endif %}">
+                            <i data-lucide="plus-circle" class="w-5 h-5"></i> {{ _('new_complaint') }}
+                        </a>
+                        <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[var(--bg-card-hover)]" style="color:var(--text-secondary);">
+                            <i data-lucide="list" class="w-5 h-5"></i> {{ _('my_complaints') }}
+                        </a>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[var(--bg-card-hover)]" style="color:var(--text-secondary);">
+                            <i data-lucide="map-pin" class="w-5 h-5"></i> {{ _('complaint_map') }}
+                        </a>
+                    {% endif %}
+                    
+                    <div class="mt-auto pt-4 border-t" style="border-color:var(--border);">
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[var(--bg-card-hover)]" style="color:var(--text-secondary);">
+                            <i data-lucide="bell" class="w-5 h-5"></i> {{ _('notifications') }}
+                        </a>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[var(--bg-card-hover)]" style="color:var(--text-secondary);">
+                            <i data-lucide="user" class="w-5 h-5"></i> {{ _('profile') }}
+                        </a>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[var(--bg-card-hover)]" style="color:var(--text-secondary);">
+                            <i data-lucide="settings" class="w-5 h-5"></i> {{ _('settings') }}
+                        </a>
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- Main Content Area -->
+            <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <!-- Top Navbar -->
+                <header class="h-16 border-b flex items-center justify-between px-4 sm:px-6 lg:px-8 z-10 flex-shrink-0" style="background:var(--bg-card);border-color:var(--border);">
+                    <div class="flex items-center gap-4">
+                        <button class="md:hidden hover:text-primary" style="color:var(--text-muted);" aria-label="Open sidebar">
+                            <i data-lucide="menu" class="w-6 h-6"></i>
+                        </button>
+                        
+                        <!-- Search Bar -->
+                        <div class="hidden sm:flex items-center rounded-xl px-3 py-1.5 w-64 border focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all" style="background:var(--bg-input);border-color:var(--border);">
+                            <i data-lucide="search" class="w-4 h-4 mr-2" style="color:var(--text-muted);"></i>
+                            <input type="text" placeholder="Search..." class="bg-transparent border-none outline-none text-sm w-full" style="color:var(--text-primary);" >
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <!-- Language Selector -->
+                        <select onchange="window.location.href='/set-language/' + this.value" class="text-xs font-medium rounded-xl px-2.5 py-1.5 outline-none cursor-pointer border" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                            <option value="en" {% if session.get('lang', 'en') == 'en' %}selected{% endif %}>English</option>
+                            <option value="te" {% if session.get('lang', 'en') == 'te' %}selected{% endif %}>తెలుగు</option>
+                            <option value="hi" {% if session.get('lang', 'en') == 'hi' %}selected{% endif %}>हिंदी</option>
+                        </select>
 
-    <!-- Main Content Block -->
-    <main style="flex: 1;">
-        {% block content %}{% endblock %}
-    </main>
+                        <button class="relative hover:text-primary transition-colors" style="color:var(--text-muted);">
+                            <i data-lucide="bell" class="w-5 h-5"></i>
+                            <span class="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full ring-2" style="ring-color:var(--bg-card);"></span>
+                        </button>
+                        <!-- Theme Toggle -->
+                        <button id="themeToggleBtn" aria-label="Toggle dark mode">
+                            <i data-lucide="moon" class="w-5 h-5 theme-icon-dark"></i>
+                            <i data-lucide="sun" class="w-5 h-5 theme-icon-light hidden"></i>
+                        </button>
+                        
+                        <div class="h-6 w-px" style="background:var(--border);"></div>
+                        
+                        <div class="flex items-center gap-3">
+                            <div class="text-right hidden sm:block">
+                                <div class="text-sm font-bold leading-tight" style="color:var(--text-primary);">{{ session.get('full_name', 'User') }}</div>
+                                <div class="text-xs capitalize" style="color:var(--text-muted);">{{ session.get('role') == 'admin' and 'Admin' or _('profile') }}</div>
+                            </div>
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-violet to-brand-cyan flex items-center justify-center text-white font-bold shadow-soft cursor-pointer">
+                                {{ session.get('full_name', 'U')[0] }}
+                            </div>
+                            <a href="/logout" class="hover:text-danger transition-colors" style="color:var(--text-muted);" title="Logout">
+                                <i data-lucide="log-out" class="w-5 h-5"></i>
+                            </a>
+                        </div>
+                        
+                        {% if session.get('role') != 'admin' %}
+                            <a href="/file-complaint" class="hidden sm:flex items-center gap-2 text-white px-3 py-1.5 rounded-xl text-sm font-medium btn-brand">
+                                <i data-lucide="plus" class="w-4 h-4"></i> {{ _('new_complaint') }}
+                            </a>
+                        {% endif %}
+                    </div>
+                </header>
+                
+                <!-- Page Content -->
+                <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" style="background:var(--bg-body);">
+                    <div class="max-w-7xl mx-auto">
+                        <!-- Alerts inside app layout -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                <div class="mb-6 space-y-2">
+                                {% for category, message in messages %}
+                                    <div class="p-4 text-sm rounded-2xl border shadow-sm flex items-center justify-between animate-fade-in
+                                        {{ 'bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/40' if category == 'error' else 'bg-violet-50 dark:bg-violet-950/30 text-violet-800 dark:text-violet-300 border-violet-200 dark:border-violet-800/40' }}">
+                                        <div class="flex items-center gap-3">
+                                            <i data-lucide="{{ 'alert-circle' if category == 'error' else 'info' }}" class="w-5 h-5"></i>
+                                            <span class="font-medium">{{ message }}</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+    {% endif %}
 
-    <!-- Footer -->
-    <footer id="app-footer">
-        <p>&copy; 2026 <a href="/">CivicConnect</a>. All rights reserved. Empowering citizen voice and transparency.</p>
-    </footer>
+    <!-- Common Main Area for block content -->
+    {% if request.path in ['/', '/login', '/register'] %}
+        <main class="flex-grow flex flex-col">
+    {% endif %}
 
-    <!-- Shared JS -->
+            {% block content %}{% endblock %}
+
+    {% if request.path in ['/', '/login', '/register'] %}
+        </main>
+        
+        <footer class="border-t mt-auto py-8" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="max-w-7xl mx-auto px-4 text-center text-sm" style="color:var(--text-muted);">
+                &copy; 2026 CCMS. Community Complaint Management System.
+            </div>
+        </footer>
+    {% else %}
+                    </div>
+                </main>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

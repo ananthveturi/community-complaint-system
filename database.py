@@ -32,6 +32,38 @@ def init_db():
     finally:
         conn.close()
 
+def ensure_schema():
+    """Apply lightweight schema upgrades for existing SQLite databases."""
+    conn = get_db()
+    try:
+        columns = [row['name'] for row in conn.execute("PRAGMA table_info(complaints)").fetchall()]
+        if 'latitude' not in columns:
+            conn.execute('ALTER TABLE complaints ADD COLUMN latitude REAL')
+        if 'longitude' not in columns:
+            conn.execute('ALTER TABLE complaints ADD COLUMN longitude REAL')
+        # AI classification columns
+        if 'ai_category' not in columns:
+            conn.execute('ALTER TABLE complaints ADD COLUMN ai_category TEXT')
+        if 'ai_priority' not in columns:
+            conn.execute('ALTER TABLE complaints ADD COLUMN ai_priority TEXT')
+        demo_locations = {
+            "Maple Street near Crossing": (40.730610, -73.935242),
+            "City Park Main Gate": (40.782865, -73.965355),
+            "Elm Street outside House #42": (40.735657, -74.172367),
+            "Block B Residential Colony": (28.613939, 77.209023),
+            "Central Park Children's Play Area": (40.770880, -73.974904),
+        }
+        for location, (latitude, longitude) in demo_locations.items():
+            conn.execute(
+                '''UPDATE complaints
+                   SET latitude = ?, longitude = ?
+                   WHERE location = ? AND latitude IS NULL AND longitude IS NULL''',
+                (latitude, longitude, location)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
 # --- User Management ---
 
 def create_user(username, password_hash, full_name, email, phone, role='citizen'):
@@ -83,15 +115,15 @@ def get_all_users():
 
 # --- Complaint Management ---
 
-def create_complaint(citizen_id, title, category, description, location, image_path=None):
+def create_complaint(citizen_id, title, category, description, location, image_path=None, latitude=None, longitude=None):
     """File a new complaint and record the initial 'Pending' status update."""
     conn = get_db()
     try:
         cursor = conn.cursor()
         cursor.execute(
-            '''INSERT INTO complaints (citizen_id, title, category, description, location, image_path, status)
-               VALUES (?, ?, ?, ?, ?, ?, 'Pending')''',
-            (citizen_id, title, category, description, location, image_path)
+            '''INSERT INTO complaints (citizen_id, title, category, description, location, latitude, longitude, image_path, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')''',
+            (citizen_id, title, category, description, location, latitude, longitude, image_path)
         )
         complaint_id = cursor.lastrowid
         
@@ -106,6 +138,23 @@ def create_complaint(citizen_id, title, category, description, location, image_p
     except Exception as e:
         conn.rollback()
         raise e
+    finally:
+        conn.close()
+
+def save_ai_prediction(complaint_id, ai_category, ai_priority):
+    """Persist AI-predicted category and priority for a complaint."""
+    if not ai_category and not ai_priority:
+        return  # Nothing to save if model was unavailable
+    conn = get_db()
+    try:
+        conn.execute(
+            'UPDATE complaints SET ai_category = ?, ai_priority = ? WHERE id = ?',
+            (ai_category, ai_priority, complaint_id)
+        )
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[CCMS DB] Failed to save AI prediction: {e}")
     finally:
         conn.close()
 

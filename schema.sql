@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS complaints (
     category TEXT NOT NULL,
     description TEXT NOT NULL,
     location TEXT NOT NULL,
+    latitude REAL,
+    longitude REAL,
     image_path TEXT, -- original file upload
     status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending', 'Under Review', 'In Progress', 'Resolved', 'Rejected')),
     department TEXT, -- assigned department

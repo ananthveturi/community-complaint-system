@@ -11,15 +11,15 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDashboardStats();
 
     // Listen to theme changes to redraw charts with correct font colors
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
+    const themeToggles = document.querySelectorAll('#themeToggleBtn');
+    themeToggles.forEach(btn => {
+        btn.addEventListener('click', () => {
             // Wait slightly for DOM to update theme attribute
             setTimeout(() => {
                 loadDashboardStats();
-            }, 100);
+            }, 150);
         });
-    }
+    });
 });
 
 /**
@@ -35,19 +35,21 @@ function loadDashboardStats() {
 }
 
 /**
- * Render/Update Chart.js instances
+ * Render/Update Chart.js instances with the premium palette
  */
 function renderCharts(data) {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const textColor = isDark ? '#cbd5e1' : '#475569';
-    const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#CBD5E1' : '#475569';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
     
-    // Theme Colors
-    const primaryColor = isDark ? '#6366f1' : '#4f46e5';
-    const successColor = isDark ? '#34d399' : '#10b981';
-    const warningColor = isDark ? '#fbbf24' : '#f59e0b';
-    const dangerColor = isDark ? '#f87171' : '#ef4444';
-    const infoColor = isDark ? '#22d3ee' : '#06b6d4';
+    // Premium brand palette
+    const violetColor  = isDark ? '#A78BFA' : '#8B5CF6';
+    const cyanColor    = isDark ? '#22D3EE' : '#06B6D4';
+    const pinkColor    = isDark ? '#F9A8D4' : '#F472B6';
+    const yellowColor  = isDark ? '#FDE68A' : '#FBBF24';
+    const greenColor   = isDark ? '#6EE7B7' : '#22C55E';
+    const dangerColor  = isDark ? '#FCA5A5' : '#EF4444';
+    const slateColor   = isDark ? '#94A3B8' : '#64748B';
 
     // 1. Category Chart (Doughnut)
     const catCanvas = document.getElementById('categoryChart');
@@ -71,16 +73,16 @@ function renderCharts(data) {
                 datasets: [{
                     data: values,
                     backgroundColor: [
-                        primaryColor,
-                        infoColor,
-                        successColor,
-                        warningColor,
+                        violetColor,
+                        cyanColor,
+                        pinkColor,
+                        yellowColor,
+                        greenColor,
                         dangerColor,
-                        '#8b5cf6',
-                        '#ec4899'
+                        slateColor
                     ],
                     borderWidth: isDark ? 2 : 1,
-                    borderColor: isDark ? '#1e293b' : '#ffffff'
+                    borderColor: isDark ? '#1E293B' : '#ffffff'
                 }]
             },
             options: {
@@ -91,10 +93,14 @@ function renderCharts(data) {
                         position: 'right',
                         labels: {
                             color: textColor,
-                            font: { family: 'Outfit', size: 12 }
+                            font: { family: 'Inter', size: 12, weight: 500 },
+                            padding: 16,
+                            usePointStyle: true,
+                            pointStyleWidth: 10,
                         }
                     }
-                }
+                },
+                cutout: '65%'
             }
         });
     }
@@ -116,13 +122,14 @@ function renderCharts(data) {
                     label: 'Complaints',
                     data: values,
                     backgroundColor: [
-                        dangerColor,  // Pending
-                        infoColor,    // Under Review
-                        primaryColor, // In Progress
-                        successColor, // Resolved
-                        '#64748b'     // Rejected
+                        yellowColor,    // Pending
+                        violetColor,    // Under Review
+                        cyanColor,      // In Progress
+                        greenColor,     // Resolved
+                        slateColor      // Rejected
                     ],
-                    borderRadius: 6
+                    borderRadius: 8,
+                    borderSkipped: false,
                 }]
             },
             options: {
@@ -136,14 +143,14 @@ function renderCharts(data) {
                         grid: { display: false },
                         ticks: {
                             color: textColor,
-                            font: { family: 'Outfit', size: 12 }
+                            font: { family: 'Inter', size: 11, weight: 500 }
                         }
                     },
                     y: {
                         grid: { color: gridColor },
                         ticks: {
                             color: textColor,
-                            font: { family: 'Outfit', size: 12 },
+                            font: { family: 'Inter', size: 11 },
                             precision: 0
                         }
                     }

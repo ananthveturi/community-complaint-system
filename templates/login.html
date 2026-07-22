@@ -1,40 +1,83 @@
 {% extends "base.html" %}
 
-{% block title %}Login - CCMS-Community Complaint Management System {% endblock %}
+{% block title %}{{ _('login') }} - CCMS{% endblock %}
 
 {% block content %}
-<div class="glass-container" style="display: flex; justify-content: center; align-items: center; min-height: 70vh;">
-    <div class="glass-card no-hover" style="max-width: 450px; width: 100%;">
-        <h2 style="text-align: center; margin-bottom: 0.5rem; font-weight: 700;">Welcome Back</h2>
-        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Log in to file or track complaints</p>
-        
-        <form action="/login" method="POST" id="login-form">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required autofocus>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <div class="flex-row-between" style="margin-bottom: 0.5rem;">
-                    <label for="password" style="margin: 0;">Password</label>
-                </div>
-                <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1.5rem;">Log In</button>
-        </form>
+<div class="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style="background:var(--bg-body);">
+    <!-- Aura Blobs -->
+    <div class="aura-violet" style="top:-100px;left:30%;"></div>
+    <div class="aura-pink" style="bottom:-60px;right:10%;"></div>
 
-        <div style="text-align: center; font-size: 0.95rem; color: var(--text-secondary);">
-            Don't have an account? <a href="/register" style="color: var(--primary); font-weight: 600; text-decoration: none;">Register here</a>
+    <!-- Logo / Header -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-md mb-8 text-center relative z-10 animate-fade-in-up">
+        <div class="mx-auto w-14 h-14 bg-gradient-to-br from-brand-violet to-brand-cyan text-white rounded-2xl flex items-center justify-center font-extrabold text-2xl shadow-glow mb-4">
+            C
         </div>
+        <h2 class="text-3xl font-extrabold tracking-tight" style="color:var(--text-primary);">{{ _('welcome_back') }}</h2>
+        <p class="mt-2 text-sm" style="color:var(--text-secondary);">
+            {{ _('secure_access') }}
+        </p>
+    </div>
 
-        <hr style="border: 0; border-top: 1px solid var(--bg-card-border); margin: 2rem 0 1.5rem 0;">
+    <!-- Main Card -->
+    <div class="sm:mx-auto sm:w-full sm:max-w-[440px] relative z-10 animate-fade-in-up" style="animation-delay:0.1s;">
+        <div class="py-8 px-4 border sm:rounded-2xl sm:px-10" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
+            <form action="/login" method="POST" id="login-form" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('username') }}</label>
+                    <div class="mt-1 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                            <i data-lucide="user" class="w-5 h-5"></i>
+                        </div>
+                        <input id="username" name="username" type="text" required autofocus
+                            class="block w-full pl-10 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="{{ _('username') }}">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <label for="password" class="block text-sm font-semibold" style="color:var(--text-secondary);">{{ _('password') }}</label>
+                        <a href="#" class="text-sm font-medium text-primary hover:text-primary-hover transition-colors">Forgot password?</a>
+                    </div>
+                    <div class="mt-1.5 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                            <i data-lucide="lock" class="w-5 h-5"></i>
+                        </div>
+                        <input id="password" name="password" type="password" required
+                            class="block w-full pl-10 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
+                            placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-2.5 px-4 rounded-xl text-sm font-semibold text-white btn-brand focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all">
+                        {{ _('login') }}
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6 text-center text-sm" style="color:var(--text-secondary);">
+                New to CCMS? 
+                <a href="/register" class="font-semibold text-primary hover:text-primary-hover transition-colors">{{ _('create_account') }}</a>
+            </div>
+        </div>
         
-        <!-- Demonstration Note -->
-        <div style="background: var(--primary-light); padding: 1rem; border-radius: var(--border-radius-sm); border: 1px solid rgba(99, 102, 241, 0.1); font-size: 0.85rem;">
-            <p style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">🔧 Sandbox Credentials:</p>
-            <p style="color: var(--text-secondary);"><strong>Admin:</strong> <code>admin</code> / <code>admin123</code></p>
-            <p style="color: var(--text-secondary); margin-top: 0.25rem;"><em>Or register a new citizen account to test submission workflow!</em></p>
+        <!-- Demo Credentials -->
+        <div class="mt-8 border rounded-xl p-4 text-center" style="background:rgba(139,92,246,0.06);border-color:rgba(139,92,246,0.15);">
+            <h5 class="text-sm font-bold text-primary mb-2 flex items-center justify-center gap-2">
+                <i data-lucide="key" class="w-4 h-4"></i> Demo Credentials
+            </h5>
+            <div class="flex items-center justify-center gap-4 text-sm">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style="background:var(--bg-card);border-color:var(--border);">
+                    <span class="font-medium" style="color:var(--text-muted);">Admin:</span>
+                    <code class="font-mono" style="color:var(--text-primary);">admin</code>
+                    <span style="color:var(--text-muted);">/</span>
+                    <code class="font-mono" style="color:var(--text-primary);">admin123</code>
+                </div>
+            </div>
         </div>
     </div>
 </div>
