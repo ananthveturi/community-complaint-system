@@ -217,6 +217,26 @@ def get_all_complaints(status=None, category=None, department=None, search=None)
     finally:
         conn.close()
 
+def delete_complaint(complaint_id):
+    """Delete a complaint and all associated updates and feedback records."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        row = cursor.execute('SELECT image_path, resolution_image_path FROM complaints WHERE id = ?', (complaint_id,)).fetchone()
+        if not row:
+            return False
+
+        cursor.execute('DELETE FROM feedback WHERE complaint_id = ?', (complaint_id,))
+        cursor.execute('DELETE FROM complaint_updates WHERE complaint_id = ?', (complaint_id,))
+        cursor.execute('DELETE FROM complaints WHERE id = ?', (complaint_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
 
 # --- Complaint Status & Assignment updates ---
 

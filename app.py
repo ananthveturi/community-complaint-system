@@ -435,6 +435,31 @@ def admin_action(complaint_id):
         
     return redirect(url_for('complaint_detail', complaint_id=complaint_id))
 
+
+@app.route('/complaint/<int:complaint_id>/delete', methods=['POST'])
+@login_required
+def delete_complaint_route(complaint_id):
+    """Delete a complaint (Citizens can delete their own cases, Admins can delete any case)."""
+    complaint = database.get_complaint_by_id(complaint_id)
+    if not complaint:
+        flash("Grievance record not found.", "danger")
+        return redirect(url_for('index'))
+        
+    # Permission check: Admin can delete any case, Citizen can only delete their own case
+    if session['role'] == 'citizen' and complaint['citizen_id'] != session['user_id']:
+        flash("Unauthorized action. Permission denied.", "danger")
+        return redirect(url_for('citizen_dashboard'))
+        
+    success = database.delete_complaint(complaint_id)
+    if success:
+        flash(f"Complaint #{complaint_id} deleted successfully.", "success")
+    else:
+        flash("Failed to delete complaint record.", "danger")
+        
+    if session['role'] == 'admin':
+        return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('citizen_dashboard'))
+
 @app.route('/complaint/<int:complaint_id>/feedback', methods=['POST'])
 @login_required
 @role_required('citizen')

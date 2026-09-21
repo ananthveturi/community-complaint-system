@@ -82,3 +82,30 @@ def test_sitemap_and_robots(client):
     rv = client.get('/sitemap.xml')
     assert rv.status_code == 200
     assert b"urlset" in rv.data
+
+def test_delete_complaint_flow(client):
+    client.post('/register', data={
+        'username': 'deleter',
+        'full_name': 'Deleter User',
+        'email': 'del@example.com',
+        'phone': '123',
+        'password': 'password123'
+    })
+    client.post('/login', data={'username': 'deleter', 'password': 'password123'})
+
+    # File complaint
+    client.post('/file-complaint', data={
+        'title': 'Case to be deleted',
+        'category': 'Roads & Traffic',
+        'location': 'Delete Street',
+        'description': 'Temporary complaint'
+    })
+
+    user = database.get_user_by_username('deleter')
+    complaints = database.get_citizen_complaints(user['id'])
+    cid = complaints[0]['id']
+
+    # Delete complaint
+    rv = client.post(f'/complaint/{cid}/delete', follow_redirects=True)
+    assert rv.status_code == 200
+    assert b"deleted successfully" in rv.data
