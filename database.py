@@ -5,10 +5,11 @@ from datetime import datetime
 DB_PATH = os.environ.get('DATABASE_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'complaints.db'))
 
 def get_db():
-    """Establish and return a database connection with dict-like row formatting."""
-    conn = sqlite3.connect(DB_PATH)
+    """Establish and return a database connection with WAL mode enabled and dict-like row formatting."""
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")  # Enable foreign keys
+    conn.execute("PRAGMA journal_mode = WAL;")  # Prevent database lock crashes
     return conn
 
 def init_db():

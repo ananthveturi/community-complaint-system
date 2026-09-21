@@ -79,6 +79,20 @@
                     <h3 class="text-lg font-bold mb-2 group-hover:text-primary transition-colors" style="color:var(--text-primary);">{{ complaint.title }}</h3>
                     <p class="text-sm line-clamp-2 mb-4" style="color:var(--text-secondary);">{{ complaint.description }}</p>
 
+                    {% if complaint.image_path or complaint.resolution_image_path %}
+                        <div class="mb-4 rounded-xl overflow-hidden h-36 w-full relative border bg-slate-900/10" style="border-color:var(--border);">
+                            <img src="{{ url_for('static', filename='uploads/' + (complaint.image_path or complaint.resolution_image_path)) }}" 
+                                 alt="{{ complaint.title }}" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                 onerror="this.onerror=null; this.parentElement.style.display='none';" />
+                            {% if complaint.resolution_image_path %}
+                                <span class="absolute bottom-2 right-2 bg-green-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">Resolved Proof</span>
+                            {% else %}
+                                <span class="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">Reported Photo</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
                     <div class="flex flex-wrap gap-2 mb-6 mt-auto">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
                             <i data-lucide="tag" class="w-3 h-3"></i> {{ complaint.category }}

@@ -3,18 +3,29 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
 import uuid
+import logging
+from PIL import Image
 import database
 import classifier
 from translations import TRANSLATIONS
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-fallback-change-me-in-production')
+
+# Security configuration & session safety flags
+secret_key = os.environ.get('SECRET_KEY')
+if not secret_key:
+    logging.warning("SECRET_KEY environment variable is not set. Using developer fallback session key.")
+    secret_key = 'ccms-dev-session-key-change-in-production'
+app.secret_key = secret_key
+
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Configuration
 UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads'))
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # Max 5MB file upload limit
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # Ensure folders exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -70,16 +81,46 @@ def parse_coordinate(value, min_value, max_value):
     return parsed
 
 def save_file(file):
-    """Save upload to static/uploads/ with an obfuscated unique filename."""
+    """
+    Validates that the file is a REAL, uncorrupted image (JPEG/PNG/GIF/WEBP)
+    with dimensions >20x20 pixels before saving with a UUID filename.
+    Returns tuple: (saved_filename, error_message)
+    """
     if not file or file.filename == '':
-        return None
-    if allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        # Prefix with unique UUID to avoid file collisions
+        return None, None
+        
+    filename = secure_filename(file.filename)
+    if not allowed_file(filename):
+        return None, "Invalid file extension. Permitted image formats: PNG, JPG, JPEG, GIF, WEBP."
+
+    try:
+        # Step 1: Open stream with PIL and verify binary structure
+        file.stream.seek(0)
+        img = Image.open(file.stream)
+        img.verify()  # Structural integrity check
+        
+        # Step 2: Re-open stream to inspect format, dimensions, and color space
+        file.stream.seek(0)
+        img = Image.open(file.stream)
+        
+        if img.format not in ['JPEG', 'PNG', 'GIF', 'WEBP', 'JPG', 'MPO']:
+            return None, f"Unsupported file type ({img.format}). Must be a real JPEG, PNG, GIF, or WEBP image."
+            
+        width, height = img.size
+        if width < 20 or height < 20:
+            return None, f"Uploaded file dimensions ({width}x{height}px) are too small to be a genuine captured photo."
+            
+        # Obfuscate filename with UUID prefix
         unique_name = f"{uuid.uuid4().hex}_{filename}"
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_name))
-        return unique_name
-    return None
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+        
+        file.stream.seek(0)
+        file.save(save_path)
+        return unique_name, None
+        
+    except Exception as e:
+        print(f"[CCMS Image Verification Error] {e}")
+        return None, "The uploaded file is not a valid or readable photo. Please upload a genuine captured image."
 
 @app.context_processor
 def utility_processor():
@@ -233,9 +274,9 @@ def file_complaint():
             
         image_path = None
         if image_file and image_file.filename != '':
-            image_path = save_file(image_file)
+            image_path, error_msg = save_file(image_file)
             if not image_path:
-                flash("Invalid image type. Permitted: png, jpg, jpeg, gif.", "danger")
+                flash(error_msg or "Invalid image file. Please upload a genuine photograph.", "danger")
                 return render_template('file_complaint.html')
                 
         complaint_id = database.create_complaint(
@@ -366,9 +407,9 @@ def admin_action(complaint_id):
                 flash("Resolution photo proof is mandatory to mark a complaint as Resolved.", "danger")
                 return redirect(url_for('complaint_detail', complaint_id=complaint_id))
             
-            resolution_image = save_file(resolution_file)
+            resolution_image, error_msg = save_file(resolution_file)
             if not resolution_image:
-                flash("Invalid proof image type. Permitted: png, jpg, jpeg, gif.", "danger")
+                flash(error_msg or "Invalid proof image. Please upload a real photograph.", "danger")
                 return redirect(url_for('complaint_detail', complaint_id=complaint_id))
                 
         # If no note is provided on status change, create a default message
@@ -442,6 +483,11 @@ def get_stats_api():
 def page_not_found(e):
     stats = database.get_dashboard_stats()
     return render_template('index.html', stats=stats), 404
+
+@app.errorhandler(413)
+def request_entity_too_large(e):
+    flash("Uploaded photo is too large! Maximum allowed size is 5 MB.", "danger")
+    return redirect(request.referrer or url_for('index')), 413
 
 @app.errorhandler(500)
 def server_error(e):

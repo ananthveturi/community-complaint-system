@@ -154,17 +154,18 @@ except Exception as _e:
 # Public API
 # ---------------------------------------------------------------------------
 
-def predict(title: str, description: str):
+def predict(title: str, description: str, min_confidence: float = 0.30):
     """
-    Predict the category and priority of a complaint.
+    Predict the category and priority of a complaint using model confidence thresholds.
 
     Args:
-        title       (str): Complaint title entered by the citizen.
-        description (str): Complaint description entered by the citizen.
+        title          (str): Complaint title entered by the citizen.
+        description    (str): Complaint description entered by the citizen.
+        min_confidence (float): Minimum required probability to return prediction.
 
     Returns:
         tuple(str, str): (ai_category, ai_priority)
-                         Returns (None, None) if the model is unavailable.
+                         Returns (None, None) if unavailable or below confidence threshold.
     """
     if not _MODEL_READY:
         return None, None
@@ -173,8 +174,18 @@ def predict(title: str, description: str):
     text = re.sub(r'\s+', ' ', f"{title.strip()} {description.strip()}")
 
     try:
-        ai_category = _cat_model.predict([text])[0]
-        ai_priority  = _pri_model.predict([text])[0]
+        # Category probability check
+        cat_probs = _cat_model.predict_proba([text])[0]
+        max_cat_prob = float(max(cat_probs))
+        best_cat_idx = cat_probs.argmax()
+        ai_category = _cat_model.classes_[best_cat_idx] if max_cat_prob >= min_confidence else None
+
+        # Priority probability check
+        pri_probs = _pri_model.predict_proba([text])[0]
+        max_pri_prob = float(max(pri_probs))
+        best_pri_idx = pri_probs.argmax()
+        ai_priority = _pri_model.classes_[best_pri_idx] if max_pri_prob >= min_confidence else None
+
         return ai_category, ai_priority
     except Exception as e:
         print(f"[CCMS Classifier] Prediction error: {e}")
