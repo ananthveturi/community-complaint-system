@@ -84,6 +84,46 @@
 
                 <!-- STEP 2: LOCATION -->
                 <div id="step-pane-2" class="space-y-6 hidden">
+                    
+                    <!-- Choice Mode Toolbar -->
+                    <div>
+                        <label class="block text-sm font-semibold mb-2.5" style="color:var(--text-secondary);">Choose How to Locate Problem Spot</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                            <button type="button" onclick="selectLocationMode('preset')" id="mode-btn-preset" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 border-primary bg-primary/10 text-primary font-bold shadow-sm">
+                                <i data-lucide="building-2" class="w-4.5 h-4.5"></i>
+                                <span class="text-xs">Landmark Dropdown</span>
+                            </button>
+                            <button type="button" onclick="selectLocationMode('gps')" id="mode-btn-gps" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 hover:border-primary font-semibold" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                                <i data-lucide="crosshair" class="w-4.5 h-4.5"></i>
+                                <span class="text-xs">Auto GPS</span>
+                            </button>
+                            <button type="button" onclick="selectLocationMode('map')" id="mode-btn-map" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 hover:border-primary font-semibold" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                                <i data-lucide="map-pin" class="w-4.5 h-4.5"></i>
+                                <span class="text-xs">Map Pinpoint</span>
+                            </button>
+                            <button type="button" onclick="selectLocationMode('manual')" id="mode-btn-manual" class="p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 hover:border-primary font-semibold" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                                <i data-lucide="edit-3" class="w-4.5 h-4.5"></i>
+                                <span class="text-xs">Manual Entry</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Choice Panel 1: Landmark Presets -->
+                    <div id="panel-location-preset" class="rounded-xl border p-4 space-y-2" style="background:var(--bg-input);border-color:var(--border);">
+                        <label for="preset-landmark-select" class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Select Popular Landmark / Public Spot</label>
+                        <select id="preset-landmark-select" onchange="applyPresetLandmark(this)" class="block w-full px-4 py-3 border rounded-xl text-sm outline-none cursor-pointer" style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);">
+                            <option value="" disabled selected>-- Select a landmark or municipal zone --</option>
+                            <option value="Central Park Main Gate" data-lat="40.782865" data-lng="-73.965355">Central Park Main Gate</option>
+                            <option value="City Market & Commercial Complex" data-lat="40.730610" data-lng="-73.935242">City Market & Commercial Complex</option>
+                            <option value="General Hospital Emergency Gate" data-lat="40.735657" data-lng="-74.172367">General Hospital Emergency Gate</option>
+                            <option value="Central Bus Stand & Railway Station" data-lat="28.613939" data-lng="77.209023">Central Bus Stand & Railway Station</option>
+                            <option value="Community Hall & Playground" data-lat="40.770880" data-lng="-73.974904">Community Hall & Playground</option>
+                            <option value="Block B Main Crossing Flyover" data-lat="28.704059" data-lng="77.102490">Block B Main Crossing Flyover</option>
+                            <option value="Government High School Front Lane" data-lat="28.535517" data-lng="77.391029">Government High School Front Lane</option>
+                        </select>
+                    </div>
+
+                    <!-- Location Input Field -->
                     <div>
                         <label for="location" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('exact_location') }}</label>
                         <div class="relative">
@@ -97,14 +137,15 @@
                         </div>
                     </div>
 
+                    <!-- Interactive Map & GPS Container -->
                     <div class="rounded-2xl border p-4" style="background:var(--bg-input);border-color:var(--border);">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                             <div>
                                 <h3 class="text-sm font-bold" style="color:var(--text-primary);">Pinpoint on Interactive Map</h3>
-                                <p class="text-xs mt-0.5" style="color:var(--text-muted);">Drag the marker or click on the map to provide exact coordinates.</p>
+                                <p class="text-xs mt-0.5" style="color:var(--text-muted);">Click anywhere on map to drop a pin. Address will auto-fill.</p>
                             </div>
-                            <button type="button" id="use-current-location" class="inline-flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm hover:border-primary hover:text-primary" style="background:var(--bg-card);border-color:var(--border);color:var(--text-secondary);">
-                                <i data-lucide="crosshair" class="w-3.5 h-3.5 text-primary animate-pulse"></i> {{ _('use_gps') }}
+                            <button type="button" id="use-current-location" class="inline-flex items-center gap-1.5 border px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm hover:border-primary hover:text-primary" style="background:var(--bg-card);border-color:var(--border);color:var(--text-secondary);">
+                                <i data-lucide="crosshair" class="w-3.5 h-3.5 text-primary animate-pulse"></i> Auto-Detect GPS
                             </button>
                         </div>
 
@@ -115,7 +156,7 @@
                         <div class="h-72 w-full rounded-xl overflow-hidden border relative z-0" id="map" style="border-color:var(--border);"></div>
                         
                         <p id="map-status" class="text-[11px] font-semibold mt-3 flex items-center gap-1.5" style="color:var(--text-muted);">
-                            <i data-lucide="info" class="w-3.5 h-3.5"></i> Marker not placed yet. Click map to place.
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i> Marker not placed yet. Choose landmark, use GPS, or click map.
                         </p>
                     </div>
 
@@ -302,6 +343,57 @@
         showStep(step);
     }
 
+    // Location Choice Mode Selector
+    function selectLocationMode(mode) {
+        const modes = ['preset', 'gps', 'map', 'manual'];
+        modes.forEach(m => {
+            const btn = document.getElementById(`mode-btn-${m}`);
+            if (btn) {
+                if (m === mode) {
+                    btn.className = "p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 border-primary bg-primary/10 text-primary font-bold shadow-sm";
+                } else {
+                    btn.className = "p-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 hover:border-primary font-semibold";
+                    btn.style.background = 'var(--bg-input)';
+                    btn.style.borderColor = 'var(--border)';
+                    btn.style.color = 'var(--text-secondary)';
+                }
+            }
+        });
+
+        const presetPanel = document.getElementById('panel-location-preset');
+        if (presetPanel) {
+            if (mode === 'preset') {
+                presetPanel.classList.remove('hidden');
+            } else {
+                presetPanel.classList.add('hidden');
+            }
+        }
+
+        if (mode === 'gps') {
+            document.getElementById('use-current-location').click();
+        } else if (mode === 'manual') {
+            document.getElementById('location').focus();
+        } else if (mode === 'map' && map) {
+            document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    // Apply Chosen Preset Landmark
+    function applyPresetLandmark(selectEl) {
+        const selectedOpt = selectEl.options[selectEl.selectedIndex];
+        if (!selectedOpt || !selectedOpt.value) return;
+
+        const locationName = selectedOpt.value;
+        const lat = parseFloat(selectedOpt.dataset.lat);
+        const lng = parseFloat(selectedOpt.dataset.lng);
+
+        document.getElementById('location').value = locationName;
+        if (!isNaN(lat) && !isNaN(lng) && map) {
+            map.setView([lat, lng], 16);
+            placeMarker(lat, lng, false); // Don't overwrite location name
+        }
+    }
+
     // Map Integration
     let map;
     let marker;
@@ -316,11 +408,11 @@
         }).addTo(map);
 
         map.on('click', function(e) {
-            placeMarker(e.latlng.lat, e.latlng.lng);
+            placeMarker(e.latlng.lat, e.latlng.lng, true);
         });
     }
 
-    function placeMarker(lat, lng) {
+    function placeMarker(lat, lng, reverseGeocode = false) {
         document.getElementById('latitude').value = lat.toFixed(7);
         document.getElementById('longitude').value = lng.toFixed(7);
         
@@ -337,8 +429,20 @@
             marker = L.marker([lat, lng], { draggable: true }).addTo(map);
             marker.on('dragend', function() {
                 const pos = marker.getLatLng();
-                placeMarker(pos.lat, pos.lng);
+                placeMarker(pos.lat, pos.lng, true);
             });
+        }
+
+        // Reverse Geocoding with OpenStreetMap Nominatim
+        if (reverseGeocode) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        document.getElementById('location').value = data.display_name;
+                    }
+                })
+                .catch(() => {});
         }
     }
 

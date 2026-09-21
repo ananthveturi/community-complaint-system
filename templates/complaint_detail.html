@@ -233,11 +233,31 @@
             <div class="h-64 rounded-xl border shadow-sm z-0 relative" id="detail-map" style="border-color:var(--border);"
                  data-latitude="{{ complaint.latitude if complaint.latitude is not none else '' }}"
                  data-longitude="{{ complaint.longitude if complaint.longitude is not none else '' }}"></div>
-            {% if complaint.latitude is not none and complaint.longitude is not none %}
-                <p class="text-[10px] font-mono mt-2" style="color:var(--text-muted);">Captured Coordinates: {{ complaint.latitude }}, {{ complaint.longitude }}</p>
-            {% else %}
-                <p class="text-[10px] mt-2" style="color:var(--text-muted);">No direct GPS coordinates. Displaying approximate geocoding location.</p>
-            {% endif %}
+            
+            <div class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                {% if complaint.latitude is not none and complaint.longitude is not none %}
+                    <p class="text-[10px] font-mono" style="color:var(--text-muted);">Exact Coordinates: {{ complaint.latitude }}, {{ complaint.longitude }}</p>
+                {% else %}
+                    <p class="text-[10px]" style="color:var(--text-muted);">No direct GPS coordinates. Displaying approximate geocoding location.</p>
+                {% endif %}
+
+                <!-- Location Navigation & Action Choices -->
+                <div class="flex flex-wrap gap-2 items-center">
+                    <a target="_blank" rel="noopener" 
+                       href="https://www.google.com/maps/dir/?api=1&destination={% if complaint.latitude and complaint.longitude %}{{ complaint.latitude }},{{ complaint.longitude }}{% else %}{{ complaint.location|urlencode }}{% endif %}"
+                       class="inline-flex items-center gap-1.5 border px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors shadow-sm hover:border-primary hover:text-primary" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                        <i data-lucide="navigation" class="w-3 h-3 text-primary"></i> Directions
+                    </a>
+                    <a target="_blank" rel="noopener" 
+                       href="https://www.openstreetmap.org/{% if complaint.latitude and complaint.longitude %}#map=16/{{ complaint.latitude }}/{{ complaint.longitude }}{% else %}search?query={{ complaint.location|urlencode }}{% endif %}"
+                       class="inline-flex items-center gap-1.5 border px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors shadow-sm hover:border-primary hover:text-primary" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                        <i data-lucide="map" class="w-3 h-3"></i> OpenStreetMap
+                    </a>
+                    <button type="button" onclick="copyLocationText('{% if complaint.latitude and complaint.longitude %}{{ complaint.latitude }}, {{ complaint.longitude }}{% else %}{{ complaint.location|replace("\'", "\\\'") }}{% endif %}')" class="inline-flex items-center gap-1.5 border px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors shadow-sm hover:border-primary hover:text-primary" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                        <i data-lucide="copy" class="w-3 h-3"></i> Copy Location
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Citizen Review Feedback Card -->
@@ -598,6 +618,14 @@
                 }
             });
         }
+    }
+
+    function copyLocationText(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Location copied to clipboard: " + text);
+        }).catch(() => {
+            alert("Location: " + text);
+        });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
