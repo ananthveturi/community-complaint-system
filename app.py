@@ -466,6 +466,29 @@ def post_feedback(complaint_id):
     return redirect(url_for('complaint_detail', complaint_id=complaint_id))
 
 
+# --- SEO & Meta Endpoints ---
+
+@app.route('/robots.txt')
+def robots():
+    """Serve robots.txt for search engine crawlers."""
+    from flask import Response
+    content = "User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /complaint/*/action\nSitemap: " + request.host_url + "sitemap.xml\n"
+    return Response(content, mimetype='text/plain')
+
+@app.route('/sitemap.xml')
+def sitemap():
+    """Serve dynamically generated XML sitemap."""
+    from flask import Response
+    host = request.host_url.rstrip('/')
+    urls = [
+        f"<url><loc>{host}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>",
+        f"<url><loc>{host}/login</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>",
+        f"<url><loc>{host}/register</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>",
+    ]
+    xml_content = f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(urls) + '\n</urlset>'
+    return Response(xml_content, mimetype='application/xml')
+
+
 # --- API Endpoint for analytics chart ---
 
 @app.route('/api/admin/stats')
