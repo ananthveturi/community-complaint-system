@@ -14,7 +14,8 @@ from integrity.image_fingerprint_service import ImageFingerprintService
 from integrity.rate_limiter import RateLimiter
 from integrity.worker import run_integrity_pipeline_sync
 from integrity.email_service import queue_complaint_confirmation_email
-from integrity.otp_service import send_dual_otp, verify_dual_otp
+from integrity.otp_service import send_dual_otp, verify_dual_otp, send_single_otp, verify_target_otp
+from integrity.sms_service import clean_phone_number
 
 app = Flask(__name__)
 app.register_blueprint(integrity_bp)
@@ -236,10 +237,45 @@ def register():
             flash("An account with this email address already exists. Please log in.", "danger")
             return render_template('register.html')
             
+        # 7. Verification Gate for Email & Phone Number
+        is_testing = app.config.get('TESTING', False)
+        email_otp = request.form.get('email_otp', '').strip()
+        phone_otp = request.form.get('phone_otp', '').strip()
+
+        # Check session verification flags first
+        is_email_verified = (session.get('reg_verified_email') == email.lower())
+        is_phone_verified = (session.get('reg_verified_phone') == clean_phone_number(phone))
+
+        # If not verified in session, check if OTPs were submitted with the form
+        if not is_email_verified and email_otp:
+            res_e = verify_target_otp(email, email_otp, purpose='registration', target_type='email')
+            if res_e.get('success'):
+                is_email_verified = True
+                session['reg_verified_email'] = email.lower()
+
+        if not is_phone_verified and phone_otp:
+            res_p = verify_target_otp(phone, phone_otp, purpose='registration', target_type='phone')
+            if res_p.get('success'):
+                is_phone_verified = True
+                session['reg_verified_phone'] = clean_phone_number(phone)
+
+        # Enforce verification unless in automated tests without explicit OTPs
+        if not is_testing:
+            if not is_email_verified:
+                flash("Email verification required: Please click 'Verify Email' and enter your 6-digit OTP.", "warning")
+                return render_template('register.html')
+            if not is_phone_verified:
+                flash("Phone verification required: Please click 'Verify Phone' and enter your 6-digit OTP.", "warning")
+                return render_template('register.html')
+
         password_hash = generate_password_hash(password)
         user_id = database.create_user(username, password_hash, full_name, email, phone, role='citizen')
         if user_id:
-            flash("Account registered successfully! All credentials confirmed. Please log in.", "success")
+            # Mark user verified in DB
+            database.mark_user_verified(user_id, email_verified=True, phone_verified=True)
+            session.pop('reg_verified_email', None)
+            session.pop('reg_verified_phone', None)
+            flash("Account registered successfully! All credentials confirmed and contacts verified. Please log in.", "success")
             return redirect(url_for('login'))
         else:
             flash("Failed to register account. Please try again.", "danger")
@@ -395,6 +431,103 @@ def api_verify_complaint_otp():
         return jsonify(result), 400
 
 
+# --- Channel-Specific OTP Verification Endpoints (Individual Email or Phone) ---
+
+@app.route('/api/otp/send-channel-otp', methods=['POST'])
+def api_send_channel_otp():
+    """
+    Dispatch a 6-digit OTP code to an individual channel (email or phone).
+    Usable during registration (anonymous) or complaint filing (authenticated).
+    """
+    data = request.get_json(silent=True) or {}
+    target = data.get('target', '').strip()
+    target_type = data.get('target_type', 'email').strip().lower()
+    purpose = data.get('purpose', 'registration').strip()
+    user_name = data.get('user_name', 'Citizen').strip()
+
+    # If purpose is complaint_submission and user is logged in, fallback to registered user info
+    if purpose == 'complaint_submission' and 'user_id' in session:
+        user = database.get_user_by_id(session['user_id'])
+        if user:
+            if not target:
+                target = user.get('email') if target_type == 'email' else user.get('phone')
+            if not user_name:
+                user_name = user.get('full_name') or user.get('username', 'Citizen')
+
+    if not target:
+        return jsonify({'success': False, 'error': f'A valid {target_type} is required.'}), 400
+
+    if target_type == 'email':
+        cleaned = target.strip().lower()
+        if '@' not in cleaned:
+            return jsonify({'success': False, 'error': 'Please enter a valid email address.'}), 400
+        if purpose == 'registration' and database.get_user_by_email(cleaned):
+            return jsonify({'success': False, 'error': 'An account with this email address already exists. Please log in.'}), 400
+    elif target_type == 'phone':
+        cleaned = clean_phone_number(target)
+        if len(cleaned) < 7:
+            return jsonify({'success': False, 'error': 'Please enter a valid phone number (at least 7 digits).'}), 400
+    else:
+        return jsonify({'success': False, 'error': f'Unsupported target type: {target_type}'}), 400
+
+    res = send_single_otp(
+        target=target,
+        target_type=target_type,
+        purpose=purpose,
+        user_name=user_name
+    )
+    return jsonify(res)
+
+
+@app.route('/api/otp/verify-channel-otp', methods=['POST'])
+def api_verify_channel_otp():
+    """
+    Verify an individual 6-digit OTP code for either email or phone.
+    Updates session verification state upon success.
+    """
+    data = request.get_json(silent=True) or {}
+    target = data.get('target', '').strip()
+    target_type = data.get('target_type', 'email').strip().lower()
+    otp_code = data.get('otp_code', '').strip()
+    purpose = data.get('purpose', 'registration').strip()
+
+    if purpose == 'complaint_submission' and 'user_id' in session and not target:
+        user = database.get_user_by_id(session['user_id'])
+        if user:
+            target = user.get('email') if target_type == 'email' else user.get('phone')
+
+    if not target or not otp_code:
+        return jsonify({'success': False, 'error': f'Target and 6-digit {target_type} OTP are required.'}), 400
+
+    res = verify_target_otp(
+        target=target,
+        otp_code=otp_code,
+        purpose=purpose,
+        target_type=target_type
+    )
+
+    if res.get('success'):
+        if purpose == 'registration':
+            if target_type == 'email':
+                session['reg_verified_email'] = target.strip().lower()
+            elif target_type == 'phone':
+                session['reg_verified_phone'] = clean_phone_number(target)
+        elif purpose == 'complaint_submission':
+            if target_type == 'email':
+                session['complaint_verified_email'] = True
+            elif target_type == 'phone':
+                session['complaint_verified_phone'] = True
+
+            if session.get('complaint_verified_email') and session.get('complaint_verified_phone'):
+                session['complaint_otp_verified'] = True
+                if 'user_id' in session:
+                    database.mark_user_verified(session['user_id'])
+
+        return jsonify(res)
+    else:
+        return jsonify(res), 400
+
+
 @app.route('/file-complaint', methods=['GET', 'POST'])
 @login_required
 @role_required('citizen')
@@ -435,6 +568,9 @@ def file_complaint():
             return render_template('file_complaint.html', current_user=citizen_user, initial_step=1)
 
         # Dual OTP Identity Verification Gate (Email & Phone Number)
+        if session.get('complaint_verified_email') and session.get('complaint_verified_phone'):
+            session['complaint_otp_verified'] = True
+
         is_verified_session = bool(session.get('complaint_otp_verified'))
         is_user_verified = bool(citizen_user.get('is_verified')) if citizen_user else False
         form_email_otp = request.form.get('email_otp', '').strip()
@@ -454,12 +590,14 @@ def file_complaint():
                 flash(f"Verification Failed: {verify_res.get('error')}", "danger")
                 return render_template('file_complaint.html', current_user=citizen_user, initial_step=4)
             is_verified_session = True
-        elif not is_verified_session and not is_user_verified and not is_testing:
+        elif not is_verified_session and not is_testing:
             flash("Identity verification required: Please enter the 6-digit OTP codes sent to your email and phone number.", "warning")
             return render_template('file_complaint.html', current_user=citizen_user, initial_step=4)
 
         # Clear one-time session verification flag
         session.pop('complaint_otp_verified', None)
+        session.pop('complaint_verified_email', None)
+        session.pop('complaint_verified_phone', None)
 
         image_path = None
         if image_file and image_file.filename != '':

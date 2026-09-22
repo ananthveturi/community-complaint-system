@@ -58,35 +58,94 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                        <label for="email" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
-                            {{ _('email') }} <span class="text-rose-500 font-bold">*</span>
-                        </label>
-                        <div class="mt-1 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
-                                <i data-lucide="mail" class="w-4 h-4"></i>
+                <!-- Email & Phone with Individual OTP Verification -->
+                <div class="space-y-4">
+                    <!-- Email Field & Verification Box -->
+                    <div class="p-3.5 rounded-2xl border transition-all" style="background:var(--bg-input);border-color:var(--border);">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="email" class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary);">
+                                {{ _('email') }} <span class="text-rose-500 font-bold">*</span>
+                            </label>
+                            <span id="reg-email-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                Unverified
+                            </span>
+                        </div>
+                        <div class="relative flex items-center gap-2">
+                            <div class="relative flex-1">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                                    <i data-lucide="mail" class="w-4 h-4"></i>
+                                </div>
+                                <input id="email" name="email" type="email" required
+                                    class="block w-full pl-9 pr-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                                    style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
+                                    placeholder="you@gmail.com">
                             </div>
-                            <input id="email" name="email" type="email" required
-                                class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
-                                style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
-                                placeholder="you@gmail.com">
+                            <button type="button" id="btn-send-email-otp" onclick="requestEmailOtp()" class="px-3 py-2.5 text-xs font-bold rounded-xl text-white btn-brand whitespace-nowrap flex items-center gap-1 shadow-sm">
+                                <i data-lucide="send" class="w-3 h-3"></i> Verify Email
+                            </button>
+                        </div>
+
+                        <!-- Email OTP Input Box (initially hidden) -->
+                        <div id="box-email-otp" class="hidden mt-3 pt-3 border-t space-y-2" style="border-color:var(--border);">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit code sent to your email:</span>
+                                <span id="timer-email-otp" class="text-[11px] text-slate-400"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="email_otp" name="email_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                    class="w-36 px-3 py-1.5 border rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
+                                    placeholder="------">
+                                <button type="button" onclick="confirmEmailOtp()" class="px-4 py-1.5 text-xs font-bold rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm">
+                                    Confirm Code
+                                </button>
+                            </div>
+                            <div id="email-dev-tip" class="hidden text-[11px] text-indigo-600 font-semibold mt-1"></div>
                         </div>
                     </div>
-                    <div>
-                        <label for="phone" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
-                            {{ _('phone') }} <span class="text-rose-500 font-bold">*</span>
-                        </label>
-                        <div class="mt-1 relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
-                                <i data-lucide="phone" class="w-4 h-4"></i>
+
+                    <!-- Phone Field & Verification Box -->
+                    <div class="p-3.5 rounded-2xl border transition-all" style="background:var(--bg-input);border-color:var(--border);">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="phone" class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary);">
+                                {{ _('phone') }} <span class="text-rose-500 font-bold">*</span>
+                            </label>
+                            <span id="reg-phone-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                Unverified
+                            </span>
+                        </div>
+                        <div class="relative flex items-center gap-2">
+                            <div class="relative flex-1">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
+                                    <i data-lucide="phone" class="w-4 h-4"></i>
+                                </div>
+                                <input id="phone" name="phone" type="tel" required
+                                    pattern="[0-9+ \-()]{7,20}"
+                                    class="block w-full pl-9 pr-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                                    style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
+                                    placeholder="+91 9876543210">
                             </div>
-                            <input id="phone" name="phone" type="tel" required
-                                pattern="[0-9+ \-()]{7,20}"
-                                title="Please enter a valid phone number (at least 7 digits)"
-                                class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
-                                style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
-                                placeholder="+91 9876543210">
+                            <button type="button" id="btn-send-phone-otp" onclick="requestPhoneOtp()" class="px-3 py-2.5 text-xs font-bold rounded-xl text-white btn-brand whitespace-nowrap flex items-center gap-1 shadow-sm">
+                                <i data-lucide="send" class="w-3 h-3"></i> Verify Phone
+                            </button>
+                        </div>
+
+                        <!-- Phone OTP Input Box (initially hidden) -->
+                        <div id="box-phone-otp" class="hidden mt-3 pt-3 border-t space-y-2" style="border-color:var(--border);">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit SMS code:</span>
+                                <span id="timer-phone-otp" class="text-[11px] text-slate-400"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="phone_otp" name="phone_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                    class="w-36 px-3 py-1.5 border rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
+                                    placeholder="------">
+                                <button type="button" onclick="confirmPhoneOtp()" class="px-4 py-1.5 text-xs font-bold rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm">
+                                    Confirm Code
+                                </button>
+                            </div>
+                            <div id="phone-dev-tip" class="hidden text-[11px] text-indigo-600 font-semibold mt-1"></div>
                         </div>
                     </div>
                 </div>
@@ -110,7 +169,7 @@
                 </div>
 
                 <div class="pt-2">
-                    <button type="submit" class="w-full flex justify-center py-2.5 px-4 rounded-xl text-sm font-semibold text-white btn-brand focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all">
+                    <button type="submit" id="btn-create-account" class="w-full flex justify-center py-2.5 px-4 rounded-xl text-sm font-semibold text-white btn-brand focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all">
                         {{ _('create_account') }}
                     </button>
                 </div>
@@ -123,4 +182,175 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let isRegEmailVerified = false;
+    let isRegPhoneVerified = false;
+
+    function requestEmailOtp() {
+        const email = document.getElementById('email').value.trim();
+        if (!email || !email.includes('@')) {
+            alert("Please enter a valid email address first.");
+            document.getElementById('email').focus();
+            return;
+        }
+
+        const btn = document.getElementById('btn-send-email-otp');
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+
+        fetch('/api/otp/send-channel-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: email, target_type: 'email', purpose: 'registration' })
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = "Resend Code";
+            if (data.success) {
+                document.getElementById('box-email-otp').classList.remove('hidden');
+                if (data.dev_otp) {
+                    const tip = document.getElementById('email-dev-tip');
+                    tip.innerHTML = `Test Mode Code: <strong>${data.dev_otp}</strong> (Auto-filled)`;
+                    tip.classList.remove('hidden');
+                    document.getElementById('email_otp').value = data.dev_otp;
+                }
+                alert(`Verification code dispatched to ${email}. Check your inbox / spam.`);
+            } else {
+                alert(data.error || "Failed to send email verification code.");
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.textContent = "Verify Email";
+            alert("Network error while requesting verification code.");
+        });
+    }
+
+    function confirmEmailOtp() {
+        const email = document.getElementById('email').value.trim();
+        const code = document.getElementById('email_otp').value.trim();
+        if (code.length !== 6) {
+            alert("Please enter the 6-digit Email OTP.");
+            return;
+        }
+
+        fetch('/api/otp/verify-channel-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: email, target_type: 'email', otp_code: code, purpose: 'registration' })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                isRegEmailVerified = true;
+                const badge = document.getElementById('reg-email-badge');
+                badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20";
+                badge.innerHTML = '<i data-lucide="check" class="w-3 h-3 inline"></i> Verified ✓';
+                document.getElementById('box-email-otp').classList.add('hidden');
+                document.getElementById('btn-send-email-otp').classList.add('hidden');
+                document.getElementById('email').readOnly = true;
+                if (window.lucide) lucide.createIcons();
+            } else {
+                alert(data.error || "Invalid email OTP code. Please try again.");
+            }
+        })
+        .catch(() => {
+            alert("Network error during verification.");
+        });
+    }
+
+    function requestPhoneOtp() {
+        const phone = document.getElementById('phone').value.trim();
+        if (!phone || phone.replace(/\D/g, '').length < 7) {
+            alert("Please enter a valid phone number (at least 7 digits) first.");
+            document.getElementById('phone').focus();
+            return;
+        }
+
+        const btn = document.getElementById('btn-send-phone-otp');
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+
+        fetch('/api/otp/send-channel-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: phone, target_type: 'phone', purpose: 'registration' })
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = "Resend Code";
+            if (data.success) {
+                document.getElementById('box-phone-otp').classList.remove('hidden');
+                if (data.dev_otp) {
+                    const tip = document.getElementById('phone-dev-tip');
+                    tip.innerHTML = `Test Mode Code: <strong>${data.dev_otp}</strong> (Auto-filled)`;
+                    tip.classList.remove('hidden');
+                    document.getElementById('phone_otp').value = data.dev_otp;
+                }
+                alert(`Verification code dispatched to ${phone}. Check your SMS.`);
+            } else {
+                alert(data.error || "Failed to send phone verification code.");
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.textContent = "Verify Phone";
+            alert("Network error while requesting SMS verification code.");
+        });
+    }
+
+    function confirmPhoneOtp() {
+        const phone = document.getElementById('phone').value.trim();
+        const code = document.getElementById('phone_otp').value.trim();
+        if (code.length !== 6) {
+            alert("Please enter the 6-digit Phone OTP.");
+            return;
+        }
+
+        fetch('/api/otp/verify-channel-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: phone, target_type: 'phone', otp_code: code, purpose: 'registration' })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                isRegPhoneVerified = true;
+                const badge = document.getElementById('reg-phone-badge');
+                badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20";
+                badge.innerHTML = '<i data-lucide="check" class="w-3 h-3 inline"></i> Verified ✓';
+                document.getElementById('box-phone-otp').classList.add('hidden');
+                document.getElementById('btn-send-phone-otp').classList.add('hidden');
+                document.getElementById('phone').readOnly = true;
+                if (window.lucide) lucide.createIcons();
+            } else {
+                alert(data.error || "Invalid phone OTP code. Please try again.");
+            }
+        })
+        .catch(() => {
+            alert("Network error during verification.");
+        });
+    }
+
+    // Form submission guard
+    const regForm = document.getElementById('register-form');
+    if (regForm) {
+        regForm.addEventListener('submit', function(e) {
+            if (!isRegEmailVerified || !isRegPhoneVerified) {
+                const emailCode = document.getElementById('email_otp').value.trim();
+                const phoneCode = document.getElementById('phone_otp').value.trim();
+                if (emailCode.length === 6 && phoneCode.length === 6) {
+                    return; // Allow submission with form OTPs
+                }
+                e.preventDefault();
+                alert("Identity Verification Required: Please verify both your Email address and Phone number with OTPs before creating an account.");
+            }
+        });
+    }
+</script>
 {% endblock %}

@@ -18,6 +18,80 @@ def generate_numeric_otp(digits: int = 6) -> str:
     return ''.join(secrets.choice('0123456789') for _ in range(digits))
 
 
+def send_single_otp(
+    target: str,
+    target_type: str = 'email',
+    purpose: str = 'registration',
+    user_name: str = 'Citizen'
+) -> Dict[str, Any]:
+    """
+    Generates and dispatches a single 6-digit OTP to either email or phone.
+    Stores record in database with 10-minute expiry.
+    """
+    if not target:
+        return {'success': False, 'error': f'A valid {target_type} is required.'}
+
+    now = datetime.utcnow()
+    expires_at = (now + timedelta(minutes=OTP_EXPIRY_MINUTES)).strftime("%Y-%m-%d %H:%M:%S")
+    otp_code = generate_numeric_otp(6)
+
+    if target_type == 'email':
+        cleaned = target.strip().lower()
+        if '@' not in cleaned:
+            return {'success': False, 'error': 'Invalid email address format.'}
+        database.save_otp_record(
+            target=cleaned,
+            otp_code=otp_code,
+            purpose=purpose,
+            target_type='email',
+            expires_at=expires_at
+        )
+        send_otp_email(
+            recipient_email=cleaned,
+            recipient_name=user_name,
+            otp_code=otp_code,
+            purpose=purpose
+        )
+        live_configured = EmailConfig.is_configured()
+        return {
+            'success': True,
+            'message': f'Verification code dispatched to {cleaned}',
+            'target': cleaned,
+            'target_type': 'email',
+            'live_sent': live_configured,
+            'dev_otp': otp_code if not live_configured else None,
+            'expires_in_seconds': OTP_EXPIRY_MINUTES * 60
+        }
+    elif target_type == 'phone':
+        cleaned = clean_phone_number(target)
+        if len(cleaned) < 7:
+            return {'success': False, 'error': 'Invalid mobile phone number format.'}
+        database.save_otp_record(
+            target=cleaned,
+            otp_code=otp_code,
+            purpose=purpose,
+            target_type='phone',
+            expires_at=expires_at
+        )
+        send_otp_sms(
+            recipient_phone=cleaned,
+            otp_code=otp_code,
+            purpose=purpose
+        )
+        live_configured = SMSConfig.is_configured()
+        return {
+            'success': True,
+            'message': f'Verification code dispatched to {cleaned}',
+            'target': cleaned,
+            'target_type': 'phone',
+            'live_sent': live_configured,
+            'dev_otp': otp_code if not live_configured else None,
+            'expires_in_seconds': OTP_EXPIRY_MINUTES * 60
+        }
+    else:
+        return {'success': False, 'error': f'Unsupported target type: {target_type}'}
+
+
 def send_dual_otp(
     user_id: Optional[int] = None,
     email: Optional[str] = None,
