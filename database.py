@@ -229,6 +229,28 @@ def get_user_by_username(username):
     finally:
         conn.close()
 
+def get_user_by_email(email):
+    """Retrieve user details by email address."""
+    conn = get_db()
+    try:
+        row = conn.execute('SELECT * FROM users WHERE LOWER(email) = LOWER(?)', (email.strip(),)).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+def get_user_by_username_or_email(identifier):
+    """Retrieve user details by username or email address."""
+    conn = get_db()
+    try:
+        cleaned = identifier.strip()
+        row = conn.execute(
+            'SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)',
+            (cleaned, cleaned)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
 def get_user_by_id(user_id):
     """Retrieve user details by ID."""
     conn = get_db()

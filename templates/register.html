@@ -23,26 +23,35 @@
     <div class="sm:mx-auto sm:w-full sm:max-w-[500px] relative z-10 animate-fade-in-up" style="animation-delay:0.1s;">
         <div class="py-8 px-4 border sm:rounded-2xl sm:px-10" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
             <form action="/register" method="POST" id="register-form" class="space-y-5">
+                <div class="p-3 rounded-xl border mb-2 flex items-center gap-2.5 text-xs font-medium" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2);color:var(--text-secondary);">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-primary flex-shrink-0"></i>
+                    <span>All credentials are <strong>mandatory</strong>. Complaint details, verification updates, and photos will be delivered to your registered email.</span>
+                </div>
+
                 <div>
-                    <label for="username" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('username') }}</label>
+                    <label for="username" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
+                        {{ _('username') }} <span class="text-rose-500 font-bold">*</span>
+                    </label>
                     <div class="mt-1 relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
                             <i data-lucide="at-sign" class="w-4 h-4"></i>
                         </div>
-                        <input id="username" name="username" type="text" required autofocus
+                        <input id="username" name="username" type="text" required minlength="3" autofocus
                             class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
                             style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
-                            placeholder="{{ _('username') }}">
+                            placeholder="{{ _('username') }} (e.g. john_doe)">
                     </div>
                 </div>
                 
                 <div>
-                    <label for="full_name" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('full_name') }}</label>
+                    <label for="full_name" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
+                        {{ _('full_name') }} <span class="text-rose-500 font-bold">*</span>
+                    </label>
                     <div class="mt-1 relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
                             <i data-lucide="user" class="w-4 h-4"></i>
                         </div>
-                        <input id="full_name" name="full_name" type="text" required
+                        <input id="full_name" name="full_name" type="text" required minlength="2"
                             class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
                             style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
                             placeholder="{{ _('full_name') }}">
@@ -51,7 +60,9 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                        <label for="email" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('email') }}</label>
+                        <label for="email" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
+                            {{ _('email') }} <span class="text-rose-500 font-bold">*</span>
+                        </label>
                         <div class="mt-1 relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
                                 <i data-lucide="mail" class="w-4 h-4"></i>
@@ -59,25 +70,31 @@
                             <input id="email" name="email" type="email" required
                                 class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
                                 style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
-                                placeholder="you@example.com">
+                                placeholder="you@gmail.com">
                         </div>
                     </div>
                     <div>
-                        <label for="phone" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('phone') }}</label>
+                        <label for="phone" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
+                            {{ _('phone') }} <span class="text-rose-500 font-bold">*</span>
+                        </label>
                         <div class="mt-1 relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
                                 <i data-lucide="phone" class="w-4 h-4"></i>
                             </div>
-                            <input id="phone" name="phone" type="tel"
+                            <input id="phone" name="phone" type="tel" required
+                                pattern="[0-9+ \-()]{7,20}"
+                                title="Please enter a valid phone number (at least 7 digits)"
                                 class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
                                 style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
-                                placeholder="{{ _('phone') }}">
+                                placeholder="+91 9876543210">
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <label for="password" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('password') }}</label>
+                    <label for="password" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
+                        {{ _('password') }} <span class="text-rose-500 font-bold">*</span>
+                    </label>
                     <div class="mt-1 relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
                             <i data-lucide="lock" class="w-4 h-4"></i>
@@ -85,7 +102,7 @@
                         <input id="password" name="password" type="password" required minlength="6"
                             class="block w-full pl-9 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
                             style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
-                            placeholder="••••••••">
+                            placeholder="•••••••• (min 6 characters)">
                     </div>
                 </div>
 

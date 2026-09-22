@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
+import re
 import uuid
 import logging
 from PIL import Image
@@ -12,6 +13,7 @@ from integrity.routes import integrity_bp
 from integrity.image_fingerprint_service import ImageFingerprintService
 from integrity.rate_limiter import RateLimiter
 from integrity.worker import run_integrity_pipeline_sync
+from integrity.email_service import queue_complaint_confirmation_email
 
 app = Flask(__name__)
 app.register_blueprint(integrity_bp)
@@ -185,48 +187,85 @@ def index():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """Citizen Registration portal."""
+    """Citizen Registration portal with mandatory credentials enforcement."""
     if 'user_id' in session:
         return redirect(url_for('index'))
         
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        full_name = request.form['full_name'].strip()
-        email = request.form['email'].strip()
+        username = request.form.get('username', '').strip()
+        full_name = request.form.get('full_name', '').strip()
+        email = request.form.get('email', '').strip()
         phone = request.form.get('phone', '').strip()
-        password = request.form['password']
+        password = request.form.get('password', '')
         
-        if not username or not full_name or not email or not password:
-            flash("All fields are required.", "danger")
+        # 1. Mandate all credentials
+        if not username or not full_name or not email or not phone or not password:
+            flash("All credentials (Username, Full Name, Email, Phone Number, Password) are mandatory.", "danger")
+            return render_template('register.html')
+            
+        # 2. Validate username length and format
+        if len(username) < 3:
+            flash("Username must be at least 3 characters long.", "danger")
+            return render_template('register.html')
+            
+        # 3. Validate email format (Gmail / standard RFC compliant)
+        email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+        if not re.match(email_regex, email):
+            flash("Please provide a valid email address (e.g. yourname@gmail.com).", "danger")
+            return render_template('register.html')
+            
+        # 4. Validate phone format (at least 7 digits)
+        phone_regex = r'^\+?[0-9\s\-()]{7,20}$'
+        digits_only = re.sub(r'\D', '', phone)
+        if not re.match(phone_regex, phone) or len(digits_only) < 7:
+            flash("Please provide a valid phone number (at least 7 digits).", "danger")
+            return render_template('register.html')
+            
+        # 5. Validate password length
+        if len(password) < 6:
+            flash("Password must be at least 6 characters long.", "danger")
+            return render_template('register.html')
+            
+        # 6. Check unique constraints
+        if database.get_user_by_username(username):
+            flash("Username already exists. Please choose a different one.", "danger")
+            return render_template('register.html')
+            
+        if database.get_user_by_email(email):
+            flash("An account with this email address already exists. Please log in.", "danger")
             return render_template('register.html')
             
         password_hash = generate_password_hash(password)
-        
         user_id = database.create_user(username, password_hash, full_name, email, phone, role='citizen')
         if user_id:
-            flash("Account registered successfully! Please log in.", "success")
+            flash("Account registered successfully! All credentials confirmed. Please log in.", "success")
             return redirect(url_for('login'))
         else:
-            flash("Username already exists. Please choose a different one.", "danger")
+            flash("Failed to register account. Please try again.", "danger")
             
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Unified user Login page."""
+    """Unified user Login page supporting username or email."""
     if 'user_id' in session:
         return redirect(url_for('index'))
         
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password']
+        identifier = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         
-        user = database.get_user_by_username(username)
+        if not identifier or not password:
+            flash("Both Username/Email and Password credentials are mandatory.", "danger")
+            return render_template('login.html')
+            
+        user = database.get_user_by_username_or_email(identifier)
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
             session['username'] = user['username']
             session['full_name'] = user['full_name']
             session['role'] = user['role']
+            session['email'] = user.get('email', '')
             
             flash(f"Welcome back, {user['full_name']}!", "success")
             if user['role'] == 'admin':
@@ -234,7 +273,7 @@ def login():
             else:
                 return redirect(url_for('citizen_dashboard'))
         else:
-            flash("Invalid username or password.", "danger")
+            flash("Invalid username/email or password.", "danger")
             
     return render_template('login.html')
 
@@ -362,20 +401,49 @@ def file_complaint():
             )
 
             # Respectful, non-accusatory citizen feedback
+            effective_status = 'Pending'
             if integrity_result['decision'] == 'REVIEW':
+                effective_status = 'Under Review'
                 database.update_complaint_status(
                     complaint_id, session['user_id'], 'Under Review',
                     'Complaint held for verification prior to departmental assignment.'
                 )
-                flash("Your complaint is being verified by our verification desk before assignment.", "info")
+                flash("Your complaint is being verified by our verification desk before assignment. A detailed receipt with all details and photo has been dispatched to your email.", "info")
             elif integrity_result['decision'] == 'REJECT':
+                effective_status = 'Rejected'
                 database.update_complaint_status(
                     complaint_id, session['user_id'], 'Rejected',
                     'Automated policy flag: multiple high-confidence abuse signals.'
                 )
                 flash("Your grievance submission could not be verified according to community guidelines.", "warning")
             else:
-                flash("Your complaint has been submitted successfully!", "success")
+                flash("Your complaint has been submitted successfully! A confirmation with all details and evidence photo has been sent to your email.", "success")
+
+            # 3. Retrieve citizen's profile and dispatch confirmation email with all details & image
+            try:
+                citizen_user = database.get_user_by_id(session['user_id'])
+                if citizen_user and citizen_user.get('email'):
+                    complaint_record = {
+                        'id': complaint_id,
+                        'title': title,
+                        'category': category,
+                        'description': description,
+                        'location': location,
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'image_path': image_path,
+                        'status': effective_status,
+                        'ai_category': ai_category,
+                        'ai_priority': ai_priority
+                    }
+                    queue_complaint_confirmation_email(
+                        recipient_email=citizen_user['email'],
+                        recipient_name=citizen_user.get('full_name') or citizen_user.get('username', 'Citizen'),
+                        complaint_data=complaint_record,
+                        upload_folder=app.config['UPLOAD_FOLDER']
+                    )
+            except Exception as mail_err:
+                logging.error(f"Error queueing complaint confirmation email: {mail_err}")
 
             return redirect(url_for('citizen_dashboard'))
         else:

@@ -24,7 +24,9 @@
         <div class="py-8 px-4 border sm:rounded-2xl sm:px-10" style="background:var(--bg-card);border-color:var(--border);box-shadow:var(--shadow-soft);">
             <form action="/login" method="POST" id="login-form" class="space-y-6">
                 <div>
-                    <label for="username" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">{{ _('username') }}</label>
+                    <label for="username" class="block text-sm font-semibold mb-1.5" style="color:var(--text-secondary);">
+                        Username or Email <span class="text-rose-500 font-bold">*</span>
+                    </label>
                     <div class="mt-1 relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style="color:var(--text-muted);">
                             <i data-lucide="user" class="w-5 h-5"></i>
@@ -32,13 +34,15 @@
                         <input id="username" name="username" type="text" required autofocus
                             class="block w-full pl-10 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
                             style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
-                            placeholder="{{ _('username') }}">
+                            placeholder="Enter username or email">
                     </div>
                 </div>
 
                 <div>
                     <div class="flex items-center justify-between">
-                        <label for="password" class="block text-sm font-semibold" style="color:var(--text-secondary);">{{ _('password') }}</label>
+                        <label for="password" class="block text-sm font-semibold" style="color:var(--text-secondary);">
+                            {{ _('password') }} <span class="text-rose-500 font-bold">*</span>
+                        </label>
                         <a href="#" class="text-sm font-medium text-primary hover:text-primary-hover transition-colors">Forgot password?</a>
                     </div>
                     <div class="mt-1.5 relative">
