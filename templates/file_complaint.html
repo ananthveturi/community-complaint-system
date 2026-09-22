@@ -350,7 +350,113 @@
 
                     <div class="p-3 rounded-xl border flex items-start gap-2.5 text-xs font-medium" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2);color:var(--text-secondary);">
                         <i data-lucide="mail-check" class="w-4 h-4 text-primary flex-shrink-0 mt-0.5"></i>
-                        <span>An automated confirmation email containing all details, GPS coordinates, and your attached evidence image will be dispatched to your registered Gmail address.</span>
+                        <span>An automated confirmation email containing all details, GPS coordinates, and your attached evidence image will be dispatched to your registered Gmail address upon successful submission.</span>
+                    </div>
+                </div>
+
+                <!-- DUAL IDENTITY VERIFICATION (EMAIL & PHONE OTP) -->
+                <div id="otp-verification-card" class="rounded-2xl border p-4 sm:p-5 space-y-4" style="background:var(--bg-input);border-color:var(--border);">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-3" style="border-color:var(--border);">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                </span>
+                                <h3 class="text-sm font-bold" style="color:var(--text-primary);">Identity & Contact Verification</h3>
+                            </div>
+                            <p class="text-xs mt-0.5" style="color:var(--text-muted);">
+                                Verify your registered email & phone number with 6-digit OTPs to authenticate this grievance.
+                            </p>
+                        </div>
+                        <div id="verification-status-badge">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Verification Required
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Contact details -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div class="p-3 rounded-xl border flex items-center justify-between" style="background:var(--bg-card);border-color:var(--border);">
+                            <div>
+                                <div class="font-semibold text-slate-500 flex items-center gap-1.5">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5 text-primary"></i> Registered Email
+                                </div>
+                                <div id="disp-email" class="font-bold text-sm mt-0.5 truncate" style="color:var(--text-primary);">
+                                    {{ current_user.email if current_user and current_user.email else session.get('email', 'Email not set') }}
+                                </div>
+                            </div>
+                            <span id="badge-email-status" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                                Pending OTP
+                            </span>
+                        </div>
+
+                        <div class="p-3 rounded-xl border flex items-center justify-between" style="background:var(--bg-card);border-color:var(--border);">
+                            <div>
+                                <div class="font-semibold text-slate-500 flex items-center gap-1.5">
+                                    <i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-500"></i> Registered Phone
+                                </div>
+                                <div id="disp-phone" class="font-bold text-sm mt-0.5 truncate" style="color:var(--text-primary);">
+                                    {{ current_user.phone if current_user and current_user.phone else 'Phone not set' }}
+                                </div>
+                            </div>
+                            <span id="badge-phone-status" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                                Pending OTP
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Action button to trigger OTP sending -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="button" id="btn-send-otps" onclick="sendVerificationOtps()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white btn-brand shadow-sm">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            <span id="btn-send-otps-text">Send Verification Codes (Email & Phone)</span>
+                        </button>
+                        <span id="otp-timer-text" class="text-xs font-semibold text-slate-500 hidden"></span>
+                    </div>
+
+                    <!-- Developer/offline alert banner if mock mode -->
+                    <div id="otp-dev-banner" class="hidden p-3 rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 text-xs">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="code" class="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5"></i>
+                            <div>
+                                <span class="font-bold">Test Environment Auto-Code:</span>
+                                <span id="otp-dev-content" class="ml-1"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OTP Input Form Fields -->
+                    <div id="otp-inputs-row" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <div>
+                            <label for="email_otp" class="block text-xs font-semibold mb-1" style="color:var(--text-secondary);">
+                                📧 6-Digit Email Code <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="email_otp" name="email_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                class="block w-full px-4 py-2.5 border rounded-xl font-mono text-center text-lg font-bold tracking-widest outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
+                                placeholder="------" />
+                            <p class="text-[11px] mt-1 text-slate-500">Check inbox / spam for verification email</p>
+                        </div>
+
+                        <div>
+                            <label for="phone_otp" class="block text-xs font-semibold mb-1" style="color:var(--text-secondary);">
+                                📱 6-Digit Phone Code <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="text" id="phone_otp" name="phone_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                class="block w-full px-4 py-2.5 border rounded-xl font-mono text-center text-lg font-bold tracking-widest outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
+                                placeholder="------" />
+                            <p class="text-[11px] mt-1 text-slate-500">Check SMS for verification code</p>
+                        </div>
+                    </div>
+
+                    <!-- Verify Button and Feedback -->
+                    <div class="flex flex-wrap items-center gap-3 pt-1">
+                        <button type="button" id="btn-verify-both" onclick="verifyBothOtps()" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Verify Both Codes Now
+                        </button>
+                        <span id="otp-verify-feedback" class="text-xs font-semibold"></span>
                     </div>
                 </div>
 
@@ -498,9 +604,13 @@
             }, 150);
         }
 
-        // If entering step 4 (Review), build review card
+        // If entering step 4 (Review), build review card & initiate dual OTP dispatch
         if (targetStep === 4) {
             populateReviewSummary();
+            if (!hasAutoDispatchedOtp && !isDualOtpVerified) {
+                hasAutoDispatchedOtp = true;
+                sendVerificationOtps();
+            }
         }
 
         // Smooth scroll to card top on mobile
@@ -725,9 +835,229 @@
     const descInput = document.getElementById('description');
     if (descInput) descInput.addEventListener('input', triggerDuplicateCheck);
 
+    // Dual OTP Verification JavaScript
+    let isDualOtpVerified = false;
+    let otpCooldownTimer = null;
+    let otpSecondsRemaining = 0;
+    let hasAutoDispatchedOtp = false;
+
+    function sendVerificationOtps() {
+        const btn = document.getElementById('btn-send-otps');
+        const btnText = document.getElementById('btn-send-otps-text');
+        const timerText = document.getElementById('otp-timer-text');
+        const devBanner = document.getElementById('otp-dev-banner');
+        const devContent = document.getElementById('otp-dev-content');
+        const feedback = document.getElementById('otp-verify-feedback');
+
+        if (btn) btn.disabled = true;
+        if (btnText) btnText.textContent = "Dispatching OTPs...";
+        if (feedback) feedback.textContent = "";
+
+        fetch('/api/otp/send-complaint-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (feedback) {
+                    feedback.className = "text-xs font-semibold text-emerald-600";
+                    feedback.textContent = `Codes dispatched! Email: ${data.email} | Phone: ${data.phone}`;
+                }
+
+                // If test environment auto-code present (when live SMTP or SMS is offline)
+                if (data.dev_email_otp || data.dev_phone_otp) {
+                    let parts = [];
+                    if (data.dev_email_otp) {
+                        parts.push(`Email OTP: <strong>${data.dev_email_otp}</strong>`);
+                        const emailInput = document.getElementById('email_otp');
+                        if (emailInput && !emailInput.value) emailInput.value = data.dev_email_otp;
+                    }
+                    if (data.dev_phone_otp) {
+                        parts.push(`Phone OTP: <strong>${data.dev_phone_otp}</strong>`);
+                        const phoneInput = document.getElementById('phone_otp');
+                        if (phoneInput && !phoneInput.value) phoneInput.value = data.dev_phone_otp;
+                    }
+                    if (devContent) devContent.innerHTML = parts.join(' &nbsp;|&nbsp; ') + " (Auto-filled for local test)";
+                    if (devBanner) devBanner.classList.remove('hidden');
+                } else {
+                    if (devBanner) devBanner.classList.add('hidden');
+                }
+
+                startOtpCooldown(60);
+            } else {
+                if (feedback) {
+                    feedback.className = "text-xs font-semibold text-rose-600";
+                    feedback.textContent = data.error || "Failed to dispatch verification codes.";
+                }
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.textContent = "Resend Verification Codes";
+            }
+        })
+        .catch(err => {
+            if (feedback) {
+                feedback.className = "text-xs font-semibold text-rose-600";
+                feedback.textContent = "Network error while sending OTPs. Please try again.";
+            }
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = "Resend Verification Codes";
+        });
+    }
+
+    function startOtpCooldown(seconds) {
+        otpSecondsRemaining = seconds;
+        const btn = document.getElementById('btn-send-otps');
+        const btnText = document.getElementById('btn-send-otps-text');
+        const timerText = document.getElementById('otp-timer-text');
+
+        if (timerText) {
+            timerText.classList.remove('hidden');
+            timerText.textContent = `(Resend in ${otpSecondsRemaining}s)`;
+        }
+
+        clearInterval(otpCooldownTimer);
+        otpCooldownTimer = setInterval(() => {
+            otpSecondsRemaining--;
+            if (otpSecondsRemaining <= 0) {
+                clearInterval(otpCooldownTimer);
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.textContent = "Resend Verification Codes";
+                if (timerText) timerText.classList.add('hidden');
+            } else {
+                if (timerText) timerText.textContent = `(Resend in ${otpSecondsRemaining}s)`;
+            }
+        }, 1000);
+    }
+
+    function verifyBothOtps(onSuccessCallback) {
+        const emailOtp = document.getElementById('email_otp').value.trim();
+        const phoneOtp = document.getElementById('phone_otp').value.trim();
+        const feedback = document.getElementById('otp-verify-feedback');
+        const btnVerify = document.getElementById('btn-verify-both');
+
+        if (!emailOtp || emailOtp.length !== 6) {
+            if (feedback) {
+                feedback.className = "text-xs font-semibold text-rose-600";
+                feedback.textContent = "Please enter the complete 6-digit Email OTP.";
+            }
+            document.getElementById('email_otp').focus();
+            return;
+        }
+
+        if (!phoneOtp || phoneOtp.length !== 6) {
+            if (feedback) {
+                feedback.className = "text-xs font-semibold text-rose-600";
+                feedback.textContent = "Please enter the complete 6-digit Phone OTP.";
+            }
+            document.getElementById('phone_otp').focus();
+            return;
+        }
+
+        if (btnVerify) {
+            btnVerify.disabled = true;
+            btnVerify.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Verifying...';
+        }
+        if (feedback) feedback.textContent = "";
+
+        fetch('/api/otp/verify-complaint-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email_otp: emailOtp,
+                phone_otp: phoneOtp
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btnVerify) {
+                btnVerify.disabled = false;
+                btnVerify.innerHTML = '<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Verify Both Codes Now';
+            }
+            if (data.success) {
+                isDualOtpVerified = true;
+                const statusBadge = document.getElementById('verification-status-badge');
+                if (statusBadge) {
+                    statusBadge.innerHTML = `
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Identity Confirmed & Verified
+                        </span>
+                    `;
+                }
+                const emailStatus = document.getElementById('badge-email-status');
+                if (emailStatus) {
+                    emailStatus.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300";
+                    emailStatus.textContent = "Verified ✓";
+                }
+                const phoneStatus = document.getElementById('badge-phone-status');
+                if (phoneStatus) {
+                    phoneStatus.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300";
+                    phoneStatus.textContent = "Verified ✓";
+                }
+                if (feedback) {
+                    feedback.className = "text-xs font-semibold text-emerald-600";
+                    feedback.textContent = "Identity verified! You can now submit your grievance.";
+                }
+                if (window.lucide) lucide.createIcons();
+
+                if (typeof onSuccessCallback === 'function') {
+                    onSuccessCallback();
+                }
+            } else {
+                if (feedback) {
+                    feedback.className = "text-xs font-semibold text-rose-600";
+                    feedback.textContent = data.error || "Verification failed. Please re-check codes.";
+                }
+                if (data.failed_channel === 'email') {
+                    document.getElementById('email_otp').focus();
+                } else if (data.failed_channel === 'phone') {
+                    document.getElementById('phone_otp').focus();
+                }
+            }
+        })
+        .catch(err => {
+            if (btnVerify) {
+                btnVerify.disabled = false;
+                btnVerify.innerHTML = '<i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Verify Both Codes Now';
+            }
+            if (feedback) {
+                feedback.className = "text-xs font-semibold text-rose-600";
+                feedback.textContent = "Network error during verification. Please try again.";
+            }
+        });
+    }
+
+    // Intercept form submission to guarantee dual verification is complete
+    const wizardForm = document.getElementById('complaint-wizard-form');
+    if (wizardForm) {
+        wizardForm.addEventListener('submit', function(e) {
+            if (!isDualOtpVerified) {
+                const emailOtp = document.getElementById('email_otp').value.trim();
+                const phoneOtp = document.getElementById('phone_otp').value.trim();
+                if (emailOtp.length === 6 && phoneOtp.length === 6) {
+                    e.preventDefault();
+                    verifyBothOtps(() => {
+                        wizardForm.submit();
+                    });
+                } else {
+                    e.preventDefault();
+                    goToStep(4);
+                    alert("Please verify both your email and phone number with 6-digit OTP codes before submitting.");
+                    const card = document.getElementById('otp-verification-card');
+                    if (card) card.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
-        updateProgressBar(1);
+        const startStep = parseInt("{{ initial_step | default(1) }}", 10) || 1;
+        goToStep(startStep);
+        if (startStep === 4 && !hasAutoDispatchedOtp) {
+            hasAutoDispatchedOtp = true;
+            sendVerificationOtps();
+        }
     });
 </script>
 {% endblock %}

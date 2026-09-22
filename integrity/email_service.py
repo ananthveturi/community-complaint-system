@@ -13,6 +13,35 @@ from typing import Dict, Any, Optional
 
 logger = logging.getLogger('civifix.email')
 
+def load_env_file(env_path: Optional[str] = None):
+    """Load key-value pairs from .env into os.environ without requiring external packages."""
+    if env_path is None:
+        candidates = [
+            os.path.join(os.getcwd(), '.env'),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'),
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                env_path = c
+                break
+    if env_path and os.path.exists(env_path):
+        try:
+            with open(env_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if '=' in line:
+                        k, v = line.split('=', 1)
+                        k = k.strip()
+                        v = v.strip().strip('"').strip("'")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception as e:
+            logger.debug(f"Failed to read .env file at {env_path}: {e}")
+
+load_env_file()
+
 # Thread pool for asynchronous, non-blocking email dispatch
 _email_executor = ThreadPoolExecutor(max_workers=2)
 
@@ -32,6 +61,9 @@ def clear_sent_emails():
 
 class EmailConfig:
     """SMTP & Email Configuration."""
+    @classmethod
+    def is_configured(cls) -> bool:
+        return bool(cls.get_smtp_user() and cls.get_smtp_password())
     @classmethod
     def get_smtp_server(cls) -> str:
         return os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
@@ -416,3 +448,130 @@ def queue_complaint_confirmation_email(
         complaint_data,
         upload_folder
     )
+
+
+def send_otp_email(
+    recipient_email: str,
+    recipient_name: str,
+    otp_code: str,
+    purpose: str = 'complaint_submission'
+) -> Dict[str, Any]:
+    """
+    Sends a 6-digit OTP verification email to verify the citizen's email address.
+    """
+    if not recipient_email or '@' not in recipient_email:
+        return {'success': False, 'error': 'Invalid recipient email'}
+
+    subject = f"[{otp_code}] Your CiviFix Email Verification Code"
+
+    text_body = f"""Hello {recipient_name},
+
+Your 6-digit identity verification code for CiviFix is: {otp_code}
+
+This code verifies your email address to validate your complaint submission.
+It expires in 10 minutes.
+
+If you did not make this request, please disregard this email.
+
+--
+CiviFix Community Grievance System
+"""
+
+    html_body = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CiviFix Verification Code</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#1e293b;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f1f5f9; padding:30px 10px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" style="max-width:540px; background-color:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); padding:28px 24px; text-align:center; color:#ffffff;">
+                            <h1 style="margin:0; font-size:22px; font-weight:800;">CiviFix Identity Verification</h1>
+                            <p style="margin:4px 0 0; font-size:13px; opacity:0.9;">Secure Grievance Submission Verification</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:28px 24px; text-align:center;">
+                            <p style="margin:0 0 16px; font-size:15px; color:#334155; text-align:left;">
+                                Hello <strong>{recipient_name}</strong>,
+                            </p>
+                            <p style="margin:0 0 24px; font-size:14px; color:#475569; line-height:1.5; text-align:left;">
+                                Please enter the following 6-digit One-Time Password (OTP) to authenticate your registered email and confirm your complaint submission:
+                            </p>
+                            
+                            <div style="margin:20px 0; padding:20px; background:#f8fafc; border:2px dashed #4f46e5; border-radius:12px; display:inline-block; min-width:260px;">
+                                <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#64748b; margin-bottom:8px; font-weight:700;">Email Verification OTP</div>
+                                <div style="font-family:Consolas, monospace, 'Courier New'; font-size:36px; font-weight:900; letter-spacing:8px; color:#4f46e5;">
+                                    {otp_code}
+                                </div>
+                                <div style="font-size:12px; color:#ef4444; margin-top:8px; font-weight:600;">⏱ Valid for 10 minutes</div>
+                            </div>
+
+                            <p style="margin:20px 0 0; font-size:12px; color:#94a3b8; line-height:1.4;">
+                                If you did not initiate this request on CiviFix, please ignore this email. Never share this code with anyone.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#0f172a; color:#94a3b8; padding:16px 24px; text-align:center; font-size:11px;">
+                            © 2026 CiviFix Community Grievance Management System
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+
+    sender = EmailConfig.get_default_sender()
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = f"CiviFix Verification <{sender}>"
+    msg['To'] = recipient_email
+    msg['Date'] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S +0000")
+
+    msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
+    msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+
+    record = {
+        'to': recipient_email,
+        'name': recipient_name,
+        'subject': subject,
+        'type': 'OTP',
+        'otp_code': otp_code,
+        'purpose': purpose,
+        'timestamp': datetime.utcnow().isoformat(),
+        'status': 'RECORDED'
+    }
+
+    smtp_user = EmailConfig.get_smtp_user()
+    smtp_password = EmailConfig.get_smtp_password()
+    smtp_server = EmailConfig.get_smtp_server()
+    smtp_port = EmailConfig.get_smtp_port()
+    use_tls = EmailConfig.get_smtp_use_tls()
+
+    if smtp_user and smtp_password:
+        try:
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=12) as server:
+                if use_tls:
+                    server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+            record['status'] = 'SENT'
+            logger.info(f"Successfully delivered OTP email to {recipient_email}")
+        except Exception as smtp_err:
+            record['status'] = 'SMTP_FAILED'
+            record['error'] = str(smtp_err)
+            logger.warning(f"SMTP delivery of OTP to {recipient_email} failed: {smtp_err}")
+    else:
+        record['status'] = 'MOCKED_LOCAL'
+        logger.info(f"[EMAIL SERVICE] OTP {otp_code} generated for {recipient_email} (Dev/Mock mode).")
+
+    _SENT_EMAILS_LOG.append(record)
+    return {'success': True, 'record': record, 'live_sent': record['status'] == 'SENT'}
+

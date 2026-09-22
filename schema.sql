@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL,
     phone TEXT,
     role TEXT NOT NULL CHECK(role IN ('citizen', 'admin')),
+    is_verified INTEGER DEFAULT 0,
+    is_email_verified INTEGER DEFAULT 0,
+    is_phone_verified INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -172,6 +175,18 @@ CREATE TABLE IF NOT EXISTS rate_limit_records (
     hits INTEGER DEFAULT 1,
     window_start DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS otps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target TEXT NOT NULL,
+    target_type TEXT NOT NULL DEFAULT 'email',
+    otp_code TEXT NOT NULL,
+    purpose TEXT NOT NULL DEFAULT 'complaint_submission',
+    attempts INTEGER DEFAULT 0,
+    is_consumed INTEGER DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Trigger to update updated_at timestamp on complaints

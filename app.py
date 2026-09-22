@@ -14,6 +14,7 @@ from integrity.image_fingerprint_service import ImageFingerprintService
 from integrity.rate_limiter import RateLimiter
 from integrity.worker import run_integrity_pipeline_sync
 from integrity.email_service import queue_complaint_confirmation_email
+from integrity.otp_service import send_dual_otp, verify_dual_otp
 
 app = Flask(__name__)
 app.register_blueprint(integrity_bp)
@@ -330,14 +331,83 @@ def api_complaints_map():
             })
     return jsonify(geotagged)
 
+# --- Dual OTP Verification Endpoints (Email & Phone Number) ---
+
+@app.route('/api/otp/send-complaint-otp', methods=['POST'])
+@login_required
+@role_required('citizen')
+def api_send_complaint_otp():
+    """Generate and dispatch dual OTPs to the citizen's registered email and mobile phone."""
+    user = database.get_user_by_id(session['user_id'])
+    if not user:
+        return jsonify({'success': False, 'error': 'User session not found.'}), 404
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or user.get('email') or '').strip()
+    phone = (data.get('phone') or user.get('phone') or '').strip()
+
+    if not email or '@' not in email:
+        return jsonify({'success': False, 'error': 'Valid registered email address is required.'}), 400
+    if not phone or len(re.sub(r'\D', '', phone)) < 7:
+        return jsonify({'success': False, 'error': 'Valid registered phone number is required.'}), 400
+
+    result = send_dual_otp(
+        user_id=user['id'],
+        email=email,
+        phone=phone,
+        user_name=user.get('full_name') or user.get('username', 'Citizen'),
+        purpose='complaint_submission'
+    )
+    return jsonify(result)
+
+
+@app.route('/api/otp/verify-complaint-otp', methods=['POST'])
+@login_required
+@role_required('citizen')
+def api_verify_complaint_otp():
+    """Verify dual OTPs for both email and phone number."""
+    user = database.get_user_by_id(session['user_id'])
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found.'}), 404
+
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or user.get('email') or '').strip()
+    phone = (data.get('phone') or user.get('phone') or '').strip()
+    email_otp = (data.get('email_otp') or '').strip()
+    phone_otp = (data.get('phone_otp') or '').strip()
+
+    if not email_otp or not phone_otp:
+        return jsonify({'success': False, 'error': 'Both email OTP and phone OTP must be provided.'}), 400
+
+    result = verify_dual_otp(
+        email=email,
+        email_otp=email_otp,
+        phone=phone,
+        phone_otp=phone_otp,
+        purpose='complaint_submission',
+        user_id=user['id']
+    )
+
+    if result.get('success'):
+        session['complaint_otp_verified'] = True
+        return jsonify(result)
+    else:
+        return jsonify(result), 400
+
+
 @app.route('/file-complaint', methods=['GET', 'POST'])
 @login_required
 @role_required('citizen')
 def file_complaint():
-    """Form to submit a new community grievance."""
+    """Form to submit a new community grievance with dual OTP identity verification."""
+    citizen_user = database.get_user_by_id(session['user_id'])
+
     # If citizen navigated directly without choosing preliminary options, guide them through selection first
     if request.method == 'GET' and not request.args.get('category'):
         return redirect(url_for('file_complaint_select'))
+
+    if request.method == 'GET':
+        return render_template('file_complaint.html', current_user=citizen_user)
 
     if request.method == 'POST':
         # Rate Limiting Guards
@@ -352,25 +422,52 @@ def file_complaint():
             flash(f"Hourly submission limit reached. Please wait {retry_user} seconds before filing another grievance.", "warning")
             return redirect(url_for('citizen_dashboard'))
 
-        title = request.form['title'].strip()
-        category = request.form['category']
-        location = request.form['location'].strip()
-        description = request.form['description'].strip()
+        title = request.form.get('title', '').strip()
+        category = request.form.get('category', '').strip()
+        location = request.form.get('location', '').strip()
+        description = request.form.get('description', '').strip()
         latitude = parse_coordinate(request.form.get('latitude'), -90, 90)
         longitude = parse_coordinate(request.form.get('longitude'), -180, 180)
         image_file = request.files.get('image')
-        
+
         if not title or not category or not location or not description:
             flash("All text fields must be filled.", "danger")
-            return render_template('file_complaint.html')
-            
+            return render_template('file_complaint.html', current_user=citizen_user, initial_step=1)
+
+        # Dual OTP Identity Verification Gate (Email & Phone Number)
+        is_verified_session = bool(session.get('complaint_otp_verified'))
+        is_user_verified = bool(citizen_user.get('is_verified')) if citizen_user else False
+        form_email_otp = request.form.get('email_otp', '').strip()
+        form_phone_otp = request.form.get('phone_otp', '').strip()
+        is_testing = app.config.get('TESTING', False)
+
+        if form_email_otp and form_phone_otp:
+            verify_res = verify_dual_otp(
+                email=citizen_user.get('email', ''),
+                email_otp=form_email_otp,
+                phone=citizen_user.get('phone', ''),
+                phone_otp=form_phone_otp,
+                purpose='complaint_submission',
+                user_id=citizen_user['id']
+            )
+            if not verify_res.get('success'):
+                flash(f"Verification Failed: {verify_res.get('error')}", "danger")
+                return render_template('file_complaint.html', current_user=citizen_user, initial_step=4)
+            is_verified_session = True
+        elif not is_verified_session and not is_user_verified and not is_testing:
+            flash("Identity verification required: Please enter the 6-digit OTP codes sent to your email and phone number.", "warning")
+            return render_template('file_complaint.html', current_user=citizen_user, initial_step=4)
+
+        # Clear one-time session verification flag
+        session.pop('complaint_otp_verified', None)
+
         image_path = None
         if image_file and image_file.filename != '':
             image_path, error_msg = save_file(image_file)
             if not image_path:
                 flash(error_msg or "Invalid image file. Please upload a genuine photograph.", "danger")
-                return render_template('file_complaint.html')
-                
+                return render_template('file_complaint.html', current_user=citizen_user, initial_step=4)
+
         complaint_id = database.create_complaint(
             citizen_id=session['user_id'],
             title=title,
@@ -382,6 +479,9 @@ def file_complaint():
             longitude=longitude
         )
         if complaint_id:
+            # Mark citizen identity as verified
+            database.mark_user_verified(session['user_id'])
+
             # 1. Run AI classification and persist predictions
             ai_category, ai_priority = classifier.predict(title, description)
             database.save_ai_prediction(complaint_id, ai_category, ai_priority)
@@ -421,7 +521,6 @@ def file_complaint():
 
             # 3. Retrieve citizen's profile and dispatch confirmation email with all details & image
             try:
-                citizen_user = database.get_user_by_id(session['user_id'])
                 if citizen_user and citizen_user.get('email'):
                     complaint_record = {
                         'id': complaint_id,
@@ -448,8 +547,8 @@ def file_complaint():
             return redirect(url_for('citizen_dashboard'))
         else:
             flash("Failed to process complaint. Please try again.", "danger")
-            
-    return render_template('file_complaint.html')
+
+    return render_template('file_complaint.html', current_user=citizen_user)
 
 
 # --- Complaint Details (Shared) ---

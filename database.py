@@ -183,6 +183,36 @@ def ensure_schema():
             )
         ''')
 
+        # Ensure is_verified, is_email_verified, is_phone_verified columns on users table
+        user_columns = [row['name'] for row in conn.execute("PRAGMA table_info(users)").fetchall()]
+        if 'is_verified' not in user_columns:
+            conn.execute('ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0')
+        if 'is_email_verified' not in user_columns:
+            conn.execute('ALTER TABLE users ADD COLUMN is_email_verified INTEGER DEFAULT 0')
+        if 'is_phone_verified' not in user_columns:
+            conn.execute('ALTER TABLE users ADD COLUMN is_phone_verified INTEGER DEFAULT 0')
+
+        # Create OTP verification records table supporting both email and phone
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS otps (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target TEXT NOT NULL,
+                target_type TEXT NOT NULL DEFAULT 'email',
+                otp_code TEXT NOT NULL,
+                purpose TEXT NOT NULL DEFAULT 'complaint_submission',
+                attempts INTEGER DEFAULT 0,
+                is_consumed INTEGER DEFAULT 0,
+                expires_at DATETIME NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        otp_columns = [row['name'] for row in conn.execute("PRAGMA table_info(otps)").fetchall()]
+        if 'target' not in otp_columns and 'email' in otp_columns:
+            conn.execute('ALTER TABLE otps ADD COLUMN target TEXT')
+            conn.execute('UPDATE otps SET target = email WHERE target IS NULL')
+        if 'target_type' not in otp_columns:
+            conn.execute("ALTER TABLE otps ADD COLUMN target_type TEXT DEFAULT 'email'")
+
         demo_locations = {
             "Maple Street near Crossing": (40.730610, -73.935242),
             "City Park Main Gate": (40.782865, -73.965355),
@@ -257,6 +287,79 @@ def get_user_by_id(user_id):
     try:
         row = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
         return dict(row) if row else None
+    finally:
+        conn.close()
+
+def mark_user_verified(user_id, email_verified=True, phone_verified=True):
+    """Mark a user's email, phone, and general identity as verified."""
+    conn = get_db()
+    try:
+        user = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+        if not user:
+            return False
+        updates = ["is_verified = 1"]
+        if email_verified:
+            updates.append("is_email_verified = 1")
+        if phone_verified:
+            updates.append("is_phone_verified = 1")
+        conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", (user_id,))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def save_otp_record(target, otp_code, purpose='complaint_submission', target_type='email', expires_at=None):
+    """Store an OTP record for an email or phone target."""
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        # Invalidate any existing unused OTPs for same target, target_type & purpose
+        cursor.execute(
+            '''UPDATE otps SET is_consumed = 1 
+               WHERE LOWER(target) = LOWER(?) AND target_type = ? AND purpose = ? AND is_consumed = 0''',
+            (target.strip(), target_type, purpose)
+        )
+        cursor.execute(
+            '''INSERT INTO otps (target, target_type, otp_code, purpose, expires_at)
+               VALUES (?, ?, ?, ?, ?)''',
+            (target.strip(), target_type, otp_code, purpose, expires_at)
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+def get_active_otp(target, purpose='complaint_submission', target_type='email'):
+    """Retrieve the current active unexpired OTP record for a target (email or phone)."""
+    conn = get_db()
+    try:
+        row = conn.execute(
+            '''SELECT * FROM otps 
+               WHERE LOWER(target) = LOWER(?) AND target_type = ? AND purpose = ? 
+                 AND is_consumed = 0 AND datetime('now') <= expires_at
+               ORDER BY id DESC LIMIT 1''',
+            (target.strip(), target_type, purpose)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+def consume_otp_record(otp_id):
+    """Mark an OTP as successfully verified/consumed."""
+    conn = get_db()
+    try:
+        conn.execute('UPDATE otps SET is_consumed = 1 WHERE id = ?', (otp_id,))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def increment_otp_attempt_record(otp_id):
+    """Increment the failed attempt counter for an OTP."""
+    conn = get_db()
+    try:
+        conn.execute('UPDATE otps SET attempts = attempts + 1 WHERE id = ?', (otp_id,))
+        conn.commit()
     finally:
         conn.close()
 
