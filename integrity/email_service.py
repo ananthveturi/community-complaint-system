@@ -60,10 +60,15 @@ def clear_sent_emails():
 
 
 class EmailConfig:
-    """SMTP & Email Configuration."""
+    """SMTP & Transactional Email Configuration."""
     @classmethod
     def is_configured(cls) -> bool:
-        return bool(cls.get_smtp_user() and cls.get_smtp_password())
+        return bool(
+            (cls.get_smtp_user() and cls.get_smtp_password())
+            or os.environ.get('RESEND_API_KEY')
+            or os.environ.get('BREVO_API_KEY')
+        )
+
     @classmethod
     def get_smtp_server(cls) -> str:
         return os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
@@ -102,6 +107,66 @@ class EmailConfig:
             or cls.get_smtp_user()
             or 'noreply.civifix@gmail.com'
         )
+
+
+def send_via_resend(recipient_email: str, subject: str, html_body: str, text_body: str, from_addr: Optional[str] = None) -> bool:
+    """Send transactional email via Resend REST API (HTTPS port 443 - zero SMTP setup required)."""
+    api_key = os.environ.get('RESEND_API_KEY')
+    if not api_key:
+        return False
+    try:
+        import urllib.request
+        import json
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {api_key.strip()}",
+            "Content-Type": "application/json",
+            "User-Agent": "CiviFix-Portal/1.0"
+        }
+        sender = from_addr or os.environ.get('RESEND_FROM') or "CiviFix <onboarding@resend.dev>"
+        payload = {
+            "from": sender,
+            "to": [recipient_email],
+            "subject": subject,
+            "html": html_body,
+            "text": text_body
+        }
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status in (200, 201)
+    except Exception as e:
+        logger.warning(f"Resend API delivery failed: {e}")
+        return False
+
+
+def send_via_brevo(recipient_email: str, recipient_name: str, subject: str, html_body: str, text_body: str) -> bool:
+    """Send transactional email via Brevo / Sendinblue REST API (HTTPS port 443)."""
+    api_key = os.environ.get('BREVO_API_KEY')
+    if not api_key:
+        return False
+    try:
+        import urllib.request
+        import json
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "api-key": api_key.strip(),
+            "Content-Type": "application/json",
+            "User-Agent": "CiviFix-Portal/1.0"
+        }
+        sender_email = os.environ.get('BREVO_SENDER_EMAIL') or "civifix@civifix.org"
+        payload = {
+            "sender": {"name": "CiviFix System", "email": sender_email},
+            "to": [{"email": recipient_email, "name": recipient_name}],
+            "subject": subject,
+            "htmlContent": html_body,
+            "textContent": text_body
+        }
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.status in (200, 201)
+    except Exception as e:
+        logger.warning(f"Brevo API delivery failed: {e}")
+        return False
 
 
 def build_complaint_email_content(
@@ -398,7 +463,23 @@ def send_complaint_confirmation_email(
         'status': 'RECORDED'
     }
 
-    # Attempt live SMTP delivery if credentials are provided
+    # 1. Attempt transactional API delivery via Resend (HTTPS port 443)
+    if os.environ.get('RESEND_API_KEY'):
+        if send_via_resend(recipient_email, subject, html_body, text_body):
+            record['status'] = 'SENT'
+            logger.info(f"Delivered complaint confirmation to {recipient_email} via Resend API.")
+            _SENT_EMAILS_LOG.append(record)
+            return {'success': True, 'record': record}
+
+    # 2. Attempt transactional API delivery via Brevo (HTTPS port 443)
+    if os.environ.get('BREVO_API_KEY'):
+        if send_via_brevo(recipient_email, recipient_name, subject, html_body, text_body):
+            record['status'] = 'SENT'
+            logger.info(f"Delivered complaint confirmation to {recipient_email} via Brevo API.")
+            _SENT_EMAILS_LOG.append(record)
+            return {'success': True, 'record': record}
+
+    # 3. Attempt live SMTP delivery if credentials are provided
     smtp_user = EmailConfig.get_smtp_user()
     smtp_password = EmailConfig.get_smtp_password()
     smtp_server = EmailConfig.get_smtp_server()
@@ -549,6 +630,23 @@ CiviFix Community Grievance System
         'status': 'RECORDED'
     }
 
+    # 1. Attempt transactional API delivery via Resend (HTTPS port 443 - instant & reliable)
+    if os.environ.get('RESEND_API_KEY'):
+        if send_via_resend(recipient_email, subject, html_body, text_body):
+            record['status'] = 'SENT'
+            logger.info(f"Delivered OTP email to {recipient_email} via Resend API.")
+            _SENT_EMAILS_LOG.append(record)
+            return {'success': True, 'record': record, 'live_sent': True}
+
+    # 2. Attempt transactional API delivery via Brevo (HTTPS port 443)
+    if os.environ.get('BREVO_API_KEY'):
+        if send_via_brevo(recipient_email, recipient_name, subject, html_body, text_body):
+            record['status'] = 'SENT'
+            logger.info(f"Delivered OTP email to {recipient_email} via Brevo API.")
+            _SENT_EMAILS_LOG.append(record)
+            return {'success': True, 'record': record, 'live_sent': True}
+
+    # 3. Attempt live SMTP delivery if credentials are provided
     smtp_user = EmailConfig.get_smtp_user()
     smtp_password = EmailConfig.get_smtp_password()
     smtp_server = EmailConfig.get_smtp_server()
