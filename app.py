@@ -330,6 +330,12 @@ def logout():
 class GoogleOAuthConfig:
     """Google OAuth 2.0 Configuration."""
     @classmethod
+    def is_locked(cls):
+        """Returns True if Google OAuth is marked locked for future enhancements."""
+        val = os.environ.get('GOOGLE_OAUTH_LOCKED', 'true').strip().lower()
+        return val not in ('0', 'false', 'no', 'off')
+
+    @classmethod
     def get_client_id(cls):
         return os.environ.get('GOOGLE_CLIENT_ID')
 
@@ -351,9 +357,13 @@ class GoogleOAuthConfig:
 
 @app.route('/auth/google/login')
 def google_oauth_login():
-    """Initiates Google OAuth 2.0 authorization redirect."""
+    """Initiates Google OAuth 2.0 authorization redirect or displays locked status."""
     if 'user_id' in session:
         return redirect(url_for('citizen_dashboard'))
+
+    if GoogleOAuthConfig.is_locked():
+        flash("Google OAuth 2.0 authentication is currently locked as a planned future enhancement.", "info")
+        return redirect(request.referrer or url_for('login'))
 
     client_id = GoogleOAuthConfig.get_client_id()
     if not client_id:

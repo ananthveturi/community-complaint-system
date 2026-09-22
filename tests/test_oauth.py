@@ -17,15 +17,23 @@ def setup_db(tmp_path, monkeypatch):
     database.ensure_schema()
     yield
 
-def test_google_oauth_login_unconfigured_shows_setup_page(client):
-    """When GOOGLE_CLIENT_ID is not set, login redirect renders setup / simulator page."""
+def test_google_oauth_login_locked_by_default(client):
+    """When GOOGLE_OAUTH_LOCKED is default (True), login redirect warns that it is locked."""
+    rv = client.get('/auth/google/login', follow_redirects=True)
+    assert rv.status_code == 200
+    assert b"locked as a planned future enhancement" in rv.data
+
+def test_google_oauth_login_unconfigured_shows_setup_page_when_unlocked(client, monkeypatch):
+    """When unlocked and GOOGLE_CLIENT_ID is not set, login redirect renders setup / simulator page."""
+    monkeypatch.setenv('GOOGLE_OAUTH_LOCKED', 'False')
     rv = client.get('/auth/google/login')
     assert rv.status_code == 200
     assert b"Google OAuth 2.0" in rv.data
     assert b"Test Google Sign-In" in rv.data
 
-def test_google_oauth_login_configured_redirects_to_google(client, monkeypatch):
-    """When GOOGLE_CLIENT_ID is set, redirect to accounts.google.com."""
+def test_google_oauth_login_configured_redirects_to_google_when_unlocked(client, monkeypatch):
+    """When unlocked and GOOGLE_CLIENT_ID is set, redirect to accounts.google.com."""
+    monkeypatch.setenv('GOOGLE_OAUTH_LOCKED', 'False')
     monkeypatch.setenv('GOOGLE_CLIENT_ID', 'test_client_id_123.apps.googleusercontent.com')
     monkeypatch.setenv('GOOGLE_CLIENT_SECRET', 'test_secret_abc')
     
@@ -83,11 +91,11 @@ def test_google_oauth_callback_user_cancelled(client):
     assert b"cancelled or failed" in rv.data
 
 def test_login_and_register_pages_contain_google_buttons(client):
-    """Verify that both login and register pages render the Google Sign-In button."""
+    """Verify that both login and register pages render the Google button marked as Locked."""
     rv_login = client.get('/login')
     assert b"Sign in with Google" in rv_login.data
-    assert b"/auth/google/login" in rv_login.data
+    assert b"Locked" in rv_login.data
 
     rv_reg = client.get('/register')
     assert b"Sign up with Google" in rv_reg.data
-    assert b"/auth/google/login" in rv_reg.data
+    assert b"Locked" in rv_reg.data
