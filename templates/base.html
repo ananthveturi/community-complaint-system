@@ -136,19 +136,32 @@
                             {% if request.path == '/admin/dashboard' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/admin/dashboard' %}color:var(--text-secondary);{% endif %}">
                             <i data-lucide="bar-chart-2" class="w-5 h-5"></i> {{ _('analytics') }}
                         </a>
+                        <a href="/complaint-map" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path == '/complaint-map' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/complaint-map' %}color:var(--text-secondary);{% endif %}">
+                            <i data-lucide="map-pin" class="w-5 h-5"></i> {{ _('complaint_map') }}
+                        </a>
+                        <a href="/admin/integrity" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path == '/admin/integrity' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/admin/integrity' %}color:var(--text-secondary);{% endif %}">
+                            <i data-lucide="shield-alert" class="w-5 h-5"></i> Integrity & Fraud
+                        </a>
+                        <a href="/admin/integrity/reviews" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path == '/admin/integrity/reviews' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/admin/integrity/reviews' %}color:var(--text-secondary);{% endif %}">
+                            <i data-lucide="check-square" class="w-5 h-5"></i> Review Queue
+                        </a>
                     {% else %}
                         <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
                             {% if request.path == '/dashboard' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/dashboard' %}color:var(--text-secondary);{% endif %}">
                             <i data-lucide="layout-dashboard" class="w-5 h-5"></i> {{ _('dashboard') }}
                         </a>
-                        <a href="/file-complaint" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                            {% if request.path == '/file-complaint' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/file-complaint' %}color:var(--text-secondary);{% endif %}">
+                        <a href="/file-complaint/select" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path in ['/file-complaint', '/file-complaint/select'] %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path not in ['/file-complaint', '/file-complaint/select'] %}color:var(--text-secondary);{% endif %}">
                             <i data-lucide="plus-circle" class="w-5 h-5"></i> {{ _('new_complaint') }}
                         </a>
                         <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[var(--bg-card-hover)]" style="color:var(--text-secondary);">
                             <i data-lucide="list" class="w-5 h-5"></i> {{ _('my_complaints') }}
                         </a>
-                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-[var(--bg-card-hover)]" style="color:var(--text-secondary);">
+                        <a href="/complaint-map" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                            {% if request.path == '/complaint-map' %}bg-primary/10 text-primary{% else %}hover:bg-[var(--bg-card-hover)]{% endif %}" style="{% if request.path != '/complaint-map' %}color:var(--text-secondary);{% endif %}">
                             <i data-lucide="map-pin" class="w-5 h-5"></i> {{ _('complaint_map') }}
                         </a>
                     {% endif %}
@@ -217,7 +230,7 @@
                         </div>
                         
                         {% if session.get('role') != 'admin' %}
-                            <a href="/file-complaint" class="hidden sm:flex items-center gap-2 text-white px-3 py-1.5 rounded-xl text-sm font-medium btn-brand">
+                            <a href="/file-complaint/select" class="hidden sm:flex items-center gap-2 text-white px-3 py-1.5 rounded-xl text-sm font-medium btn-brand">
                                 <i data-lucide="plus" class="w-4 h-4"></i> {{ _('new_complaint') }}
                             </a>
                         {% endif %}

@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Inspect Case #{{ complaint.id }} - Integrity Review{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8 animate-fade-in">
+    <!-- Breadcrumb & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6" style="border-color:var(--border);">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <a href="/admin/integrity" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back to Review Queue
+                </a>
+                <span class="text-xs" style="color:var(--text-muted);">&bull;</span>
+                <span class="text-xs font-semibold" style="color:var(--text-muted);">Grievance Integrity Inspection</span>
+            </div>
+            <h1 class="text-2xl font-extrabold tracking-tight" style="color:var(--text-primary);">
+                Case #{{ complaint.id }}: {{ complaint.title }}
+            </h1>
+            <p class="text-xs mt-1" style="color:var(--text-muted);">
+                Filed by <strong>{{ complaint.citizen_name }}</strong> ({{ complaint.citizen_email }}) on {{ complaint.created_at }}
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            {% set rs = (assessment.risk_score if assessment else complaint.risk_score) or 0 %}
+            <div class="px-4 py-2.5 rounded-2xl border text-center" style="background:var(--bg-card);border-color:var(--border);">
+                <div class="text-[10px] uppercase font-bold tracking-wider" style="color:var(--text-muted);">Calculated Risk</div>
+                <div class="text-xl font-black {% if rs >= 70 %}text-rose-500{% elif rs >= 40 %}text-amber-500{% else %}text-emerald-500{% endif %}">
+                    {{ rs|round(1) }} / 100
+                </div>
+            </div>
+            <div class="px-4 py-2.5 rounded-2xl border text-center" style="background:var(--bg-card);border-color:var(--border);">
+                <div class="text-[10px] uppercase font-bold tracking-wider" style="color:var(--text-muted);">Recommended Policy</div>
+                <div class="text-base font-extrabold uppercase {% if (assessment.decision if assessment else 'REVIEW') == 'ACCEPT' %}text-emerald-500{% elif (assessment.decision if assessment else 'REVIEW') == 'REJECT' %}text-rose-500{% else %}text-amber-500{% endif %}">
+                    {{ assessment.decision if assessment else 'REVIEW' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Inspection Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left 2 Cols: Evidence & Signals -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Complaint Summary Card -->
+            <div class="p-6 rounded-2xl border space-y-4" style="background:var(--bg-card);border-color:var(--border);">
+                <div class="flex items-center justify-between border-b pb-3" style="border-color:var(--border);">
+                    <h3 class="text-base font-bold" style="color:var(--text-primary);">Grievance Submission</h3>
+                    <span class="text-xs px-2.5 py-1 rounded-lg border font-semibold" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                        {{ complaint.category }}
+                    </span>
+                </div>
+                
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--text-muted);">Description</h4>
+                    <p class="text-sm leading-relaxed" style="color:var(--text-secondary);">{{ complaint.description }}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 pt-2 border-t" style="border-color:var(--border);">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--text-muted);">Reported Location</h4>
+                        <p class="text-xs font-semibold flex items-center gap-1.5" style="color:var(--text-primary);">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-primary"></i> {{ complaint.location }}
+                        </p>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--text-muted);">Coordinates</h4>
+                        <p class="text-xs font-mono" style="color:var(--text-secondary);">
+                            {% if complaint.latitude and complaint.longitude %}
+                                {{ complaint.latitude|round(5) }}, {{ complaint.longitude|round(5) }}
+                            {% else %}
+                                Not provided
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                {% if complaint.image_path %}
+                    <div class="pt-4 border-t" style="border-color:var(--border);">
+                        <h4 class="text-xs font-bold uppercase tracking-wider mb-2" style="color:var(--text-muted);">Attached Evidence Photo</h4>
+                        <div class="max-h-80 rounded-xl overflow-hidden border bg-slate-900/10 flex items-center justify-center" style="border-color:var(--border);">
+                            <img src="/static/uploads/{{ complaint.image_path }}" alt="Evidence" class="max-h-80 w-auto object-contain" />
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Triggered Fraud Signals -->
+            <div class="p-6 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+                <h3 class="text-base font-bold mb-4 flex items-center gap-2" style="color:var(--text-primary);">
+                    <i data-lucide="activity" class="w-5 h-5 text-primary"></i> Triggered Integrity Signals
+                </h3>
+
+                {% if assessment and assessment.signals %}
+                    <div class="space-y-3">
+                        {% for sig in assessment.signals %}
+                            <div class="p-4 rounded-xl border flex items-start gap-3.5" style="background:var(--bg-input);border-color:var(--border);">
+                                <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-xs font-mono font-bold text-primary">{{ sig.type }}</h4>
+                                        <span class="text-xs font-extrabold text-rose-500">+{{ sig.score|round(1) }} pts</span>
+                                    </div>
+                                    <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-secondary);">{{ sig.explanation }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-4 rounded-xl border text-xs text-emerald-600 bg-emerald-500/10 border-emerald-500/20 flex items-center gap-2 font-medium">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> All integrity rules passed with clean metrics.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Duplicate Complaints Comparison (if any) -->
+            {% if similar_complaints %}
+                <div class="p-6 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+                    <h3 class="text-base font-bold mb-4 flex items-center gap-2" style="color:var(--text-primary);">
+                        <i data-lucide="copy" class="w-5 h-5 text-cyan-500"></i> Geographically & Semantically Similar Complaints
+                    </h3>
+                    <div class="space-y-3">
+                        {% for dup in similar_complaints %}
+                            <div class="p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3" style="background:var(--bg-input);border-color:var(--border);">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-primary">Case #{{ dup.similar_complaint_id }}</span>
+                                        <span class="text-xs px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-semibold">{{ dup.similar_status }}</span>
+                                    </div>
+                                    <h4 class="text-sm font-bold mt-1" style="color:var(--text-primary);">{{ dup.similar_title }}</h4>
+                                    <p class="text-xs mt-0.5" style="color:var(--text-muted);">{{ dup.reason }}</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-600">
+                                        {{ (dup.similarity_score * 100)|round }}% match
+                                    </span>
+                                    <a href="/complaint/{{ dup.similar_complaint_id }}" target="_blank" class="text-xs font-bold text-primary hover:underline">
+                                        View Case &rarr;
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Duplicate Photos Comparison (if any) -->
+            {% if similar_images %}
+                <div class="p-6 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+                    <h3 class="text-base font-bold mb-4 flex items-center gap-2" style="color:var(--text-primary);">
+                        <i data-lucide="image" class="w-5 h-5 text-violet-500"></i> Visual Duplicate Images Detected
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for img in similar_images %}
+                            <div class="p-3 rounded-xl border space-y-2" style="background:var(--bg-input);border-color:var(--border);">
+                                <div class="h-32 rounded-lg overflow-hidden bg-slate-900/10">
+                                    <img src="/static/uploads/{{ img.matched_image_path }}" class="w-full h-full object-cover" />
+                                </div>
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-primary">Case #{{ img.matched_complaint_id }}</span>
+                                    <span class="font-extrabold text-violet-600">{{ (img.similarity_score * 100)|round }}% visual match</span>
+                                </div>
+                                <p class="text-[11px]" style="color:var(--text-muted);">Method: {{ img.method }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Right 1 Col: Citizen Profile & Actions -->
+        <div class="space-y-6">
+            
+            <!-- Officer Decision Actions Form -->
+            <div class="p-6 rounded-2xl border space-y-4 shadow-sm" style="background:var(--bg-card);border-color:var(--border);">
+                <h3 class="text-base font-bold" style="color:var(--text-primary);">Administrative Decision</h3>
+                <p class="text-xs" style="color:var(--text-muted);">Take an action. Automated detections do not permanently delete files or ban accounts.</p>
+
+                <form action="/admin/integrity/review/{{ complaint.id }}/action" method="POST" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1" style="color:var(--text-muted);">Officer Review Notes</label>
+                        <textarea name="notes" rows="3" placeholder="Enter findings, verification rationale, or instructions..."
+                                  class="w-full px-3 py-2 border rounded-xl text-xs outline-none"
+                                  style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2 pt-2">
+                        <button type="submit" name="action" value="APPROVE" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                            <i data-lucide="check" class="w-4 h-4"></i> Approve Complaint
+                        </button>
+
+                        <button type="submit" name="action" value="MARK_DUPLICATE" class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                            <i data-lucide="copy" class="w-4 h-4"></i> Mark as Duplicate
+                        </button>
+
+                        <button type="submit" name="action" value="REQUEST_MORE_INFO" class="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                            <i data-lucide="message-square" class="w-4 h-4"></i> Request More Information
+                        </button>
+
+                        <button type="submit" name="action" value="REJECT" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                            <i data-lucide="x" class="w-4 h-4"></i> Reject Complaint
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Citizen Behavioral Profile -->
+            <div class="p-6 rounded-2xl border space-y-3" style="background:var(--bg-card);border-color:var(--border);">
+                <h3 class="text-sm font-bold flex items-center gap-2" style="color:var(--text-primary);">
+                    <i data-lucide="user-check" class="w-4 h-4 text-primary"></i> Citizen Abuse Telemetry
+                </h3>
+                <div class="divide-y text-xs" style="border-color:var(--border);">
+                    <div class="py-2 flex justify-between">
+                        <span style="color:var(--text-muted);">Total Submissions:</span>
+                        <strong style="color:var(--text-primary);">{{ user_profile.complaint_count_total }}</strong>
+                    </div>
+                    <div class="py-2 flex justify-between">
+                        <span style="color:var(--text-muted);">Past Rejected Cases:</span>
+                        <strong class="text-rose-500">{{ user_profile.rejected_count }}</strong>
+                    </div>
+                    <div class="py-2 flex justify-between">
+                        <span style="color:var(--text-muted);">Behavioral Risk Score:</span>
+                        <strong class="{% if user_profile.behavioral_risk_score >= 50 %}text-rose-500{% else %}text-emerald-500{% endif %}">
+                            {{ user_profile.behavioral_risk_score|round(1) }} / 100
+                        </strong>
+                    </div>
+                    <div class="py-2 flex justify-between">
+                        <span style="color:var(--text-muted);">CAPTCHA Enforced:</span>
+                        <strong>{% if user_profile.captcha_required %}Yes{% else %}No (Low Friction){% endif %}</strong>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

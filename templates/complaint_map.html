@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Map - Community Grievance GIS{% endblock %}
+
+{% block head %}
+<!-- Leaflet Map CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map-canvas {
+        height: calc(100vh - 16rem);
+        min-height: 480px;
+        width: 100%;
+        border-radius: 1rem;
+        z-index: 1;
+    }
+    .custom-marker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        border: 2px solid white;
+    }
+    .marker-pending { background-color: #F59E0B; }
+    .marker-under-review { background-color: #8B5CF6; }
+    .marker-in-progress { background-color: #06B6D4; }
+    .marker-resolved { background-color: #10B981; }
+    .marker-rejected { background-color: #EF4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header & Live GIS Stats -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="p-2 rounded-xl bg-primary/10 text-primary">
+                    <i data-lucide="map-pin" class="w-6 h-6"></i>
+                </span>
+                <div>
+                    <h1 class="text-2xl font-extrabold tracking-tight" style="color:var(--text-primary);">Community Grievance Map</h1>
+                    <p class="text-sm mt-0.5" style="color:var(--text-muted);">Real-time geospatial intelligence of civic issues, hotspots, and resolved municipal projects.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button type="button" onclick="locateUserPosition()" class="px-4 py-2.5 rounded-xl border text-sm font-semibold flex items-center gap-2 hover:border-primary transition-all" style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);">
+                <i data-lucide="crosshair" class="w-4 h-4 text-primary"></i> Locate Me
+            </button>
+            <a href="/file-complaint/select" class="px-4 py-2.5 rounded-xl text-white text-sm font-semibold btn-brand flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> New Complaint
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="p-4 rounded-2xl border flex items-center gap-3" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="text-xs font-semibold" style="color:var(--text-muted);">Pending Review</p>
+                <p class="text-xl font-extrabold" id="stat-pending" style="color:var(--text-primary);">0</p>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border flex items-center gap-3" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center font-bold">
+                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="text-xs font-semibold" style="color:var(--text-muted);">In Progress</p>
+                <p class="text-xl font-extrabold" id="stat-progress" style="color:var(--text-primary);">0</p>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border flex items-center gap-3" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="text-xs font-semibold" style="color:var(--text-muted);">Verified Resolved</p>
+                <p class="text-xl font-extrabold" id="stat-resolved" style="color:var(--text-primary);">0</p>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border flex items-center gap-3" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center font-bold">
+                <i data-lucide="layers" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="text-xs font-semibold" style="color:var(--text-muted);">Geotagged Incidents</p>
+                <p class="text-xl font-extrabold" id="stat-total" style="color:var(--text-primary);">0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4" style="background:var(--bg-card);border-color:var(--border);">
+        <div class="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+            <!-- Status Filter -->
+            <div class="w-44">
+                <select id="filter-status" onchange="filterMapMarkers()" class="w-full px-3 py-2 border rounded-xl text-sm outline-none cursor-pointer" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
+                    <option value="ALL">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Under Review">Under Review</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="w-48">
+                <select id="filter-category" onchange="filterMapMarkers()" class="w-full px-3 py-2 border rounded-xl text-sm outline-none cursor-pointer" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
+                    <option value="ALL">All Categories</option>
+                    <option value="Roads & Traffic">Roads & Traffic</option>
+                    <option value="Sanitation & Waste">Sanitation & Waste</option>
+                    <option value="Water Supply">Water Supply</option>
+                    <option value="Electricity & Power">Electricity & Power</option>
+                    <option value="Public Safety">Public Safety</option>
+                    <option value="Parks & Recreation">Parks & Recreation</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <!-- Search input -->
+            <div class="relative flex-1 min-w-[180px]">
+                <input type="text" id="filter-search" oninput="filterMapMarkers()" placeholder="Search by title or locality..."
+                       class="w-full pl-9 pr-4 py-2 border rounded-xl text-sm outline-none" style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5" style="color:var(--text-muted);"></i>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs font-semibold" style="color:var(--text-muted);">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Pending</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-cyan-500 inline-block"></span> In Progress</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Resolved</span>
+        </div>
+    </div>
+
+    <!-- Interactive Leaflet Map Container -->
+    <div class="relative rounded-2xl overflow-hidden border shadow-sm" style="border-color:var(--border);background:var(--bg-card);">
+        <div id="map-canvas"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet Map JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let map;
+    let markersLayer;
+    let allComplaints = [];
+
+    function initGisMap() {
+        // Default center on India / demonstration regional coordinates
+        map = L.map('map-canvas').setView([20.5937, 78.9629], 5);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        markersLayer = L.layerGroup().addTo(map);
+
+        // Fetch complaint pins from backend API
+        fetch('/api/complaints/map')
+            .then(res => res.json())
+            .then(data => {
+                allComplaints = data || [];
+                renderMarkers(allComplaints);
+                updateGisStats(allComplaints);
+
+                // Auto fit bounds if markers exist
+                fitMapToMarkers();
+            })
+            .catch(err => {
+                console.error("Failed to load map data:", err);
+            });
+    }
+
+    function getMarkerColorClass(status) {
+        switch(status) {
+            case 'Pending': return 'marker-pending';
+            case 'Under Review': return 'marker-under-review';
+            case 'In Progress': return 'marker-in-progress';
+            case 'Resolved': return 'marker-resolved';
+            case 'Rejected': return 'marker-rejected';
+            default: return 'marker-pending';
+        }
+    }
+
+    function renderMarkers(complaints) {
+        markersLayer.clearLayers();
+
+        complaints.forEach(item => {
+            if (item.latitude && item.longitude) {
+                const colorClass = getMarkerColorClass(item.status);
+                const customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div class="custom-marker ${colorClass}" style="width:28px;height:28px;"><i data-lucide="map-pin" style="width:14px;height:14px;"></i></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28],
+                    popupAnchor: [0, -28]
+                });
+
+                const marker = L.marker([item.latitude, item.longitude], { icon: customIcon });
+
+                const imgHtml = item.image_path 
+                    ? `<div class="mb-2 rounded-lg overflow-hidden h-24 w-full bg-slate-900/10"><img src="/static/uploads/${item.image_path}" class="w-full h-full object-cover" onerror="this.parentElement.style.display='none';"></div>` 
+                    : '';
+
+                const statusBadgeColor = item.status === 'Resolved' ? 'background:#dcfce7;color:#166534;' 
+                    : (item.status === 'In Progress' ? 'background:#cffafe;color:#155e75;' : 'background:#fef3c7;color:#92400e;');
+
+                const popupHtml = `
+                    <div style="min-width:220px;max-width:280px;font-family:sans-serif;padding:4px;">
+                        ${imgHtml}
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                            <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${statusBadgeColor}">${item.status}</span>
+                            <span style="font-size:11px;color:#64748b;font-weight:600;">#${item.id}</span>
+                        </div>
+                        <h4 style="font-size:13px;font-weight:700;margin:0 0 4px 0;color:#0f172a;line-height:1.3;">${item.title}</h4>
+                        <p style="font-size:11px;color:#475569;margin:0 0 8px 0;"><strong>Locality:</strong> ${item.location}</p>
+                        <p style="font-size:11px;color:#475569;margin:0 0 8px 0;"><strong>Category:</strong> ${item.category}</p>
+                        <a href="/complaint/${item.id}" target="_blank" style="display:inline-block;width:100%;text-align:center;padding:6px 0;background:#4f46e5;color:white;text-decoration:none;border-radius:6px;font-size:11px;font-weight:600;">View Case Timeline &rarr;</a>
+                    </div>
+                `;
+
+                marker.bindPopup(popupHtml);
+                markersLayer.addLayer(marker);
+            }
+        });
+
+        // Re-initialize Lucide icons on custom marker elements
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    function filterMapMarkers() {
+        const selectedStatus = document.getElementById('filter-status').value;
+        const selectedCategory = document.getElementById('filter-category').value;
+        const searchTxt = document.getElementById('filter-search').value.toLowerCase().trim();
+
+        const filtered = allComplaints.filter(c => {
+            const matchesStatus = (selectedStatus === 'ALL' || c.status === selectedStatus);
+            const matchesCategory = (selectedCategory === 'ALL' || c.category === selectedCategory);
+            const matchesSearch = !searchTxt || (
+                (c.title && c.title.toLowerCase().includes(searchTxt)) ||
+                (c.location && c.location.toLowerCase().includes(searchTxt)) ||
+                (c.description && c.description.toLowerCase().includes(searchTxt))
+            );
+            return matchesStatus && matchesCategory && matchesSearch;
+        });
+
+        renderMarkers(filtered);
+    }
+
+    function updateGisStats(complaints) {
+        let pending = 0, progress = 0, resolved = 0, total = 0;
+        complaints.forEach(c => {
+            if (c.latitude && c.longitude) {
+                total++;
+                if (c.status === 'Pending' || c.status === 'Under Review') pending++;
+                else if (c.status === 'In Progress') progress++;
+                else if (c.status === 'Resolved') resolved++;
+            }
+        });
+
+        document.getElementById('stat-pending').innerText = pending;
+        document.getElementById('stat-progress').innerText = progress;
+        document.getElementById('stat-resolved').innerText = resolved;
+        document.getElementById('stat-total').innerText = total;
+    }
+
+    function fitMapToMarkers() {
+        const validCoords = allComplaints
+            .filter(c => c.latitude && c.longitude)
+            .map(c => [c.latitude, c.longitude]);
+
+        if (validCoords.length > 0) {
+            const bounds = L.latLngBounds(validCoords);
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        }
+    }
+
+    function locateUserPosition() {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                map.setView([lat, lng], 15);
+                L.circle([lat, lng], { radius: 300, color: '#3b82f6', fillOpacity: 0.15 }).addTo(map);
+                L.marker([lat, lng]).addTo(map).bindPopup("<b>Your Current Location</b>").openPopup();
+            },
+            err => {
+                alert("Unable to retrieve your location: " + err.message);
+            }
+        );
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initGisMap();
+    });
+</script>
+{% endblock %}

@@ -8,10 +8,16 @@
         <h1 class="text-2xl font-extrabold tracking-tight" style="color:var(--text-primary);">{{ _('citizen_workspace') }}</h1>
         <p class="text-sm mt-1" style="color:var(--text-muted);">{{ _('track_reported') }}</p>
     </div>
-    <a href="/file-complaint" class="inline-flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm font-semibold btn-brand focus:ring-2 focus:ring-primary/20 focus:outline-none">
-        <i data-lucide="plus" class="w-4 h-4"></i>
-        {{ _('report_new') }}
-    </a>
+    <div class="flex items-center gap-3">
+        <a href="/complaint-map" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border hover:border-primary transition-all shadow-sm" style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);">
+            <i data-lucide="map-pin" class="w-4 h-4 text-primary"></i>
+            {{ _('complaint_map') }}
+        </a>
+        <a href="/file-complaint/select" class="inline-flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm font-semibold btn-brand focus:ring-2 focus:ring-primary/20 focus:outline-none shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            {{ _('report_new') }}
+        </a>
+    </div>
 </div>
 
 <!-- KPI Stats -->
@@ -149,28 +155,6 @@
             {% endfor %}
         </div>
 
-        <!-- Glassmorphic Delete Confirmation Modal -->
-        <div id="deleteModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
-            <div class="rounded-2xl border max-w-md w-full p-6 shadow-2xl space-y-4" style="background:var(--bg-card);border-color:var(--border);">
-                <div class="w-12 h-12 rounded-2xl bg-danger/10 text-danger flex items-center justify-center mx-auto">
-                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                </div>
-                <div class="text-center">
-                    <h3 class="text-lg font-bold" style="color:var(--text-primary);">Delete Grievance Case?</h3>
-                    <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">
-                        Are you sure you want to delete <span id="deleteCaseTitle" class="font-bold text-primary"></span>? This action is permanent and cannot be undone.
-                    </p>
-                </div>
-                <form id="deleteCaseForm" action="" method="POST" class="flex gap-3 pt-2">
-                    <button type="button" onclick="closeDeleteModal()" class="w-full py-2.5 rounded-xl border text-xs font-semibold transition-colors" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
-                        Cancel
-                    </button>
-                    <button type="submit" class="w-full py-2.5 rounded-xl bg-danger hover:bg-red-600 text-white text-xs font-bold transition-all shadow-md">
-                        Yes, Delete Case
-                    </button>
-                </form>
-            </div>
-        </div>
     {% else %}
         <!-- Empty State -->
         <div class="rounded-2xl border border-dashed p-12 text-center" style="background:var(--bg-card);border-color:var(--border);">
@@ -179,7 +163,7 @@
             </div>
             <h3 class="text-xl font-bold mb-2" style="color:var(--text-primary);">{{ _('no_cases') }}</h3>
             <p class="max-w-md mx-auto mb-6" style="color:var(--text-muted);">When you notice a public issue, create a case with location, description, and optional evidence. Your timeline will appear here.</p>
-            <a href="/file-complaint" class="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold btn-brand">
+            <a href="/file-complaint/select" class="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-sm font-semibold btn-brand">
                 <i data-lucide="plus" class="w-4 h-4"></i> {{ _('report_new') }}
             </a>
         </div>
@@ -189,14 +173,58 @@
 
 {% block scripts %}
 <script>
+    // Create and inject the delete modal at the top level of <body> so it's not
+    // clipped by the overflow:auto on the <main> scroll container.
+    (function() {
+        var modal = document.createElement('div');
+        modal.id = 'deleteModal';
+        modal.style.display = 'none';
+        modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in';
+        modal.innerHTML = `
+            <div class="rounded-2xl border max-w-md w-full p-6 shadow-2xl space-y-4" style="background:var(--bg-card);border-color:var(--border);">
+                <div class="w-12 h-12 rounded-2xl bg-danger/10 text-danger flex items-center justify-center mx-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                </div>
+                <div class="text-center">
+                    <h3 class="text-lg font-bold" style="color:var(--text-primary);">Delete Grievance Case?</h3>
+                    <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">
+                        Are you sure you want to delete <span id="deleteCaseTitle" class="font-bold text-primary"></span>? This action is permanent and cannot be undone.
+                    </p>
+                </div>
+                <form id="deleteCaseForm" action="" method="POST" class="flex gap-3 pt-2">
+                    <button type="button" id="deleteCancelBtn" class="w-full py-2.5 rounded-xl border text-xs font-semibold transition-colors" style="background:var(--bg-input);color:var(--text-secondary);border-color:var(--border);">
+                        Cancel
+                    </button>
+                    <button type="submit" class="w-full py-2.5 rounded-xl bg-danger hover:bg-red-600 text-white text-xs font-bold transition-all shadow-md">
+                        Yes, Delete Case
+                    </button>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Close on backdrop click (but not on inner dialog click)
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeDeleteModal();
+        });
+
+        // Close on cancel button
+        document.getElementById('deleteCancelBtn').addEventListener('click', closeDeleteModal);
+    })();
+
     function confirmDeleteComplaint(id, title) {
-        document.getElementById('deleteCaseTitle').textContent = `"#${id}: ${title}"`;
-        document.getElementById('deleteCaseForm').action = `/complaint/${id}/delete`;
-        document.getElementById('deleteModal').classList.remove('hidden');
+        document.getElementById('deleteCaseTitle').textContent = '"#' + id + ': ' + title + '"';
+        document.getElementById('deleteCaseForm').action = '/complaint/' + id + '/delete';
+        document.getElementById('deleteModal').style.display = 'flex';
     }
 
     function closeDeleteModal() {
-        document.getElementById('deleteModal').classList.add('hidden');
+        document.getElementById('deleteModal').style.display = 'none';
     }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeDeleteModal();
+    });
 </script>
 {% endblock %}

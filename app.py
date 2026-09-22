@@ -8,8 +8,13 @@ from PIL import Image
 import database
 import classifier
 from translations import TRANSLATIONS
+from integrity.routes import integrity_bp
+from integrity.image_fingerprint_service import ImageFingerprintService
+from integrity.rate_limiter import RateLimiter
+from integrity.worker import run_integrity_pipeline_sync
 
 app = Flask(__name__)
+app.register_blueprint(integrity_bp)
 
 # Security configuration & session safety flags
 secret_key = os.environ.get('SECRET_KEY')
@@ -82,8 +87,8 @@ def parse_coordinate(value, min_value, max_value):
 
 def save_file(file):
     """
-    Validates that the file is a REAL, uncorrupted image (JPEG/PNG/GIF/WEBP)
-    with dimensions >20x20 pixels before saving with a UUID filename.
+    Validates that the file is a genuine, uncorrupted image (JPEG/PNG/GIF/WEBP)
+    using magic bytes validation and OWASP security practices.
     Returns tuple: (saved_filename, error_message)
     """
     if not file or file.filename == '':
@@ -93,24 +98,21 @@ def save_file(file):
     if not allowed_file(filename):
         return None, "Invalid file extension. Permitted image formats: PNG, JPG, JPEG, GIF, WEBP."
 
+    # Validate file size, magic bytes signature, and structural integrity
+    is_valid, mime_type, error_msg = ImageFingerprintService.validate_image_security(
+        file.stream, filename, max_size_bytes=app.config['MAX_CONTENT_LENGTH']
+    )
+    if not is_valid:
+        return None, error_msg or "Invalid file structure or untrusted format signature."
+
     try:
-        # Step 1: Open stream with PIL and verify binary structure
         file.stream.seek(0)
         img = Image.open(file.stream)
-        img.verify()  # Structural integrity check
-        
-        # Step 2: Re-open stream to inspect format, dimensions, and color space
-        file.stream.seek(0)
-        img = Image.open(file.stream)
-        
-        if img.format not in ['JPEG', 'PNG', 'GIF', 'WEBP', 'JPG', 'MPO']:
-            return None, f"Unsupported file type ({img.format}). Must be a real JPEG, PNG, GIF, or WEBP image."
-            
         width, height = img.size
         if width < 20 or height < 20:
             return None, f"Uploaded file dimensions ({width}x{height}px) are too small to be a genuine captured photo."
             
-        # Obfuscate filename with UUID prefix
+        # Obfuscate filename with UUID prefix to prevent directory traversal / file collision
         unique_name = f"{uuid.uuid4().hex}_{filename}"
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
         
@@ -120,7 +122,7 @@ def save_file(file):
         
     except Exception as e:
         print(f"[CCMS Image Verification Error] {e}")
-        return None, "The uploaded file is not a valid or readable photo. Please upload a genuine captured image."
+        return None, "The uploaded file could not be securely saved. Please upload a genuine photo."
 
 @app.context_processor
 def utility_processor():
@@ -254,12 +256,63 @@ def citizen_dashboard():
     complaints = database.get_citizen_complaints(session['user_id'])
     return render_template('citizen_dashboard.html', complaints=complaints)
 
+@app.route('/file-complaint/select')
+@login_required
+@role_required('citizen')
+def file_complaint_select():
+    """Preliminary step: select problem category and urgency level."""
+    return render_template('file_complaint_select.html')
+
+@app.route('/complaint-map')
+@app.route('/map')
+@login_required
+def complaint_map():
+    """Interactive GIS Community Grievance Map."""
+    return render_template('complaint_map.html')
+
+@app.route('/api/complaints/map')
+def api_complaints_map():
+    """API providing geotagged complaints for GIS visualization."""
+    complaints = database.get_all_complaints()
+    geotagged = []
+    for c in complaints:
+        if c.get('latitude') is not None and c.get('longitude') is not None:
+            geotagged.append({
+                'id': c['id'],
+                'title': c['title'],
+                'category': c['category'],
+                'status': c['status'],
+                'location': c['location'],
+                'latitude': c['latitude'],
+                'longitude': c['longitude'],
+                'department': c.get('department'),
+                'image_path': c.get('image_path'),
+                'created_at': str(c.get('created_at', ''))
+            })
+    return jsonify(geotagged)
+
 @app.route('/file-complaint', methods=['GET', 'POST'])
 @login_required
 @role_required('citizen')
 def file_complaint():
     """Form to submit a new community grievance."""
+    # If citizen navigated directly without choosing preliminary options, guide them through selection first
+    if request.method == 'GET' and not request.args.get('category'):
+        return redirect(url_for('file_complaint_select'))
+
     if request.method == 'POST':
+        # Rate Limiting Guards
+        client_ip = request.remote_addr or '127.0.0.1'
+        is_ip_allowed, _, retry_ip = RateLimiter.check_ip_rate_limit(client_ip)
+        if not is_ip_allowed:
+            flash(f"System traffic limit reached. Please wait {retry_ip} seconds before trying again.", "danger")
+            return redirect(url_for('citizen_dashboard'))
+
+        is_user_allowed, _, retry_user = RateLimiter.check_complaint_submission_limit(session['user_id'])
+        if not is_user_allowed:
+            flash(f"Hourly submission limit reached. Please wait {retry_user} seconds before filing another grievance.", "warning")
+            return redirect(url_for('citizen_dashboard'))
+
         title = request.form['title'].strip()
         category = request.form['category']
         location = request.form['location'].strip()
@@ -290,10 +343,40 @@ def file_complaint():
             longitude=longitude
         )
         if complaint_id:
-            # Run AI classification and persist predictions
+            # 1. Run AI classification and persist predictions
             ai_category, ai_priority = classifier.predict(title, description)
             database.save_ai_prediction(complaint_id, ai_category, ai_priority)
-            flash("Your complaint has been submitted successfully!", "success")
+
+            # 2. Run Complaint Integrity, Fraud & Abuse Detection Pipeline
+            integrity_result = run_integrity_pipeline_sync(
+                complaint_id=complaint_id,
+                title=title,
+                category=category,
+                description=description,
+                location=location,
+                latitude=latitude,
+                longitude=longitude,
+                image_path=image_path,
+                citizen_id=session['user_id'],
+                upload_folder=app.config['UPLOAD_FOLDER']
+            )
+
+            # Respectful, non-accusatory citizen feedback
+            if integrity_result['decision'] == 'REVIEW':
+                database.update_complaint_status(
+                    complaint_id, session['user_id'], 'Under Review',
+                    'Complaint held for verification prior to departmental assignment.'
+                )
+                flash("Your complaint is being verified by our verification desk before assignment.", "info")
+            elif integrity_result['decision'] == 'REJECT':
+                database.update_complaint_status(
+                    complaint_id, session['user_id'], 'Rejected',
+                    'Automated policy flag: multiple high-confidence abuse signals.'
+                )
+                flash("Your grievance submission could not be verified according to community guidelines.", "warning")
+            else:
+                flash("Your complaint has been submitted successfully!", "success")
+
             return redirect(url_for('citizen_dashboard'))
         else:
             flash("Failed to process complaint. Please try again.", "danger")

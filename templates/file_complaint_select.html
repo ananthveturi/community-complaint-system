@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Report New Complaint - Choose Issue Scope{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+    <!-- Progress / Breadcrumb header -->
+    <div>
+        <div class="flex items-center gap-3 mb-2">
+            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary">
+                Step 1 of 2
+            </span>
+            <span class="text-xs font-semibold" style="color:var(--text-muted);">Preliminary Category & Urgency</span>
+        </div>
+        <h1 class="text-3xl font-extrabold tracking-tight" style="color:var(--text-primary);">What civic issue are you experiencing?</h1>
+        <p class="text-sm mt-1" style="color:var(--text-secondary);">Select the department category and severity level to optimize routing before opening the full submission workspace.</p>
+    </div>
+
+    <!-- Quick Issue Search -->
+    <div class="relative">
+        <input type="text" id="category-search" oninput="filterCategories()" placeholder="Search problem types (e.g., pothole, streetlight, garbage, pipe burst)..."
+               class="w-full pl-11 pr-4 py-3.5 border rounded-2xl text-sm shadow-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+               style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);">
+        <i data-lucide="search" class="w-5 h-5 absolute left-4 top-3.5" style="color:var(--text-muted);"></i>
+    </div>
+
+    <!-- Category Selection Cards -->
+    <div>
+        <label class="block text-xs font-bold uppercase tracking-wider mb-3" style="color:var(--text-muted);">1. Select Primary Grievance Category</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="category-grid">
+            
+            <!-- Roads & Traffic -->
+            <div onclick="selectCategory('Roads & Traffic', this)" class="category-card p-5 rounded-2xl border cursor-pointer transition-all hover:border-primary hover:shadow-md relative group" style="background:var(--bg-card);border-color:var(--border);" data-keywords="road traffic pothole signal divider asphalt street">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="truck" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold" style="color:var(--text-primary);">Roads & Traffic</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">Potholes, broken signals, damaged dividers, or road cave-ins.</p>
+                    </div>
+                </div>
+                <div class="selected-indicator hidden absolute top-4 right-4 w-5 h-5 rounded-full bg-primary text-white items-center justify-center text-xs">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+            <!-- Sanitation & Waste -->
+            <div onclick="selectCategory('Sanitation & Waste', this)" class="category-card p-5 rounded-2xl border cursor-pointer transition-all hover:border-primary hover:shadow-md relative group" style="background:var(--bg-card);border-color:var(--border);" data-keywords="garbage waste trash sanitation bin dump dirt cleaning">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="trash-2" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold" style="color:var(--text-primary);">Sanitation & Waste</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">Overflowing dumpsters, uncollected garbage, or illegal dumping.</p>
+                    </div>
+                </div>
+                <div class="selected-indicator hidden absolute top-4 right-4 w-5 h-5 rounded-full bg-primary text-white items-center justify-center text-xs">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+            <!-- Water Supply -->
+            <div onclick="selectCategory('Water Supply', this)" class="category-card p-5 rounded-2xl border cursor-pointer transition-all hover:border-primary hover:shadow-md relative group" style="background:var(--bg-card);border-color:var(--border);" data-keywords="water pipe leak leakage pipe burst contamination pressure sewage">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="droplet" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold" style="color:var(--text-primary);">Water Supply</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">Burst municipal pipes, discolored tap water, or low pressure.</p>
+                    </div>
+                </div>
+                <div class="selected-indicator hidden absolute top-4 right-4 w-5 h-5 rounded-full bg-primary text-white items-center justify-center text-xs">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+            <!-- Electricity & Power -->
+            <div onclick="selectCategory('Electricity & Power', this)" class="category-card p-5 rounded-2xl border cursor-pointer transition-all hover:border-primary hover:shadow-md relative group" style="background:var(--bg-card);border-color:var(--border);" data-keywords="electricity power light streetlight wire pole blackout spark voltage">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-500/10 text-yellow-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="zap" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold" style="color:var(--text-primary);">Electricity & Power</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">Streetlights off at night, dangling live wires, or power faults.</p>
+                    </div>
+                </div>
+                <div class="selected-indicator hidden absolute top-4 right-4 w-5 h-5 rounded-full bg-primary text-white items-center justify-center text-xs">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+            <!-- Public Safety -->
+            <div onclick="selectCategory('Public Safety', this)" class="category-card p-5 rounded-2xl border cursor-pointer transition-all hover:border-primary hover:shadow-md relative group" style="background:var(--bg-card);border-color:var(--border);" data-keywords="safety hazard manhole danger open drain construction accident crime">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold" style="color:var(--text-primary);">Public Safety</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">Uncovered manholes, unsafe debris, or physical civic hazards.</p>
+                    </div>
+                </div>
+                <div class="selected-indicator hidden absolute top-4 right-4 w-5 h-5 rounded-full bg-primary text-white items-center justify-center text-xs">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+            <!-- Parks & Recreation -->
+            <div onclick="selectCategory('Parks & Recreation', this)" class="category-card p-5 rounded-2xl border cursor-pointer transition-all hover:border-primary hover:shadow-md relative group" style="background:var(--bg-card);border-color:var(--border);" data-keywords="park tree branch playground bench garden recreation grass">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="trees" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold" style="color:var(--text-primary);">Parks & Recreation</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">Damaged children's swings, fallen tree branches, or park upkeep.</p>
+                    </div>
+                </div>
+                <div class="selected-indicator hidden absolute top-4 right-4 w-5 h-5 rounded-full bg-primary text-white items-center justify-center text-xs">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+            <!-- Other -->
+            <div onclick="selectCategory('Other', this)" class="category-card p-5 rounded-2xl border cursor-pointer transition-all hover:border-primary hover:shadow-md relative group" style="background:var(--bg-card);border-color:var(--border);" data-keywords="other municipal general inquiry complaint noise encroachment">
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <i data-lucide="help-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold" style="color:var(--text-primary);">Other Services</h3>
+                        <p class="text-xs mt-1 leading-relaxed" style="color:var(--text-muted);">Encroachments, stray animals, noise violations, or misc issues.</p>
+                    </div>
+                </div>
+                <div class="selected-indicator hidden absolute top-4 right-4 w-5 h-5 rounded-full bg-primary text-white items-center justify-center text-xs">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Urgency Level Selection -->
+    <div>
+        <label class="block text-xs font-bold uppercase tracking-wider mb-3" style="color:var(--text-muted);">2. Select Urgency Level</label>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            
+            <div onclick="selectUrgency('Normal', this)" id="urgency-normal" class="urgency-card p-4 rounded-2xl border cursor-pointer flex items-center gap-3 border-primary bg-primary/10 text-primary font-bold shadow-sm">
+                <div class="w-3.5 h-3.5 rounded-full bg-blue-500"></div>
+                <div>
+                    <h4 class="text-sm font-bold">Standard Priority</h4>
+                    <p class="text-xs font-normal" style="color:var(--text-secondary);">General maintenance within standard SLA</p>
+                </div>
+            </div>
+
+            <div onclick="selectUrgency('Urgent', this)" id="urgency-urgent" class="urgency-card p-4 rounded-2xl border cursor-pointer flex items-center gap-3 hover:border-primary transition-all" style="background:var(--bg-card);border-color:var(--border);">
+                <div class="w-3.5 h-3.5 rounded-full bg-amber-500"></div>
+                <div>
+                    <h4 class="text-sm font-bold" style="color:var(--text-primary);">High Priority</h4>
+                    <p class="text-xs font-normal" style="color:var(--text-secondary);">Disrupts traffic or neighborhood utilities</p>
+                </div>
+            </div>
+
+            <div onclick="selectUrgency('Emergency', this)" id="urgency-emergency" class="urgency-card p-4 rounded-2xl border cursor-pointer flex items-center gap-3 hover:border-primary transition-all" style="background:var(--bg-card);border-color:var(--border);">
+                <div class="w-3.5 h-3.5 rounded-full bg-rose-500 animate-pulse"></div>
+                <div>
+                    <h4 class="text-sm font-bold" style="color:var(--text-primary);">Critical Hazard</h4>
+                    <p class="text-xs font-normal" style="color:var(--text-secondary);">Immediate risk to life or physical safety</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="pt-6 border-t flex items-center justify-between" style="border-color:var(--border);">
+        <a href="/dashboard" class="px-5 py-2.5 rounded-xl border text-sm font-semibold hover:bg-[var(--bg-card-hover)] transition-all" style="border-color:var(--border);color:var(--text-secondary);">
+            Cancel
+        </a>
+        <button type="button" id="btn-continue" onclick="proceedToFullForm()" disabled
+                class="px-8 py-3 rounded-xl text-white font-bold text-sm btn-brand flex items-center gap-2 opacity-50 cursor-not-allowed transition-all">
+            Continue to Complaint Filing <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let chosenCategory = null;
+    let chosenUrgency = 'Normal';
+
+    function selectCategory(category, element) {
+        chosenCategory = category;
+
+        // Reset all category cards
+        document.querySelectorAll('.category-card').forEach(card => {
+            card.classList.remove('border-primary', 'ring-2', 'ring-primary/20', 'bg-primary/5');
+            const check = card.querySelector('.selected-indicator');
+            if (check) check.classList.add('hidden');
+            if (check) check.classList.remove('flex');
+        });
+
+        // Highlight selected
+        element.classList.add('border-primary', 'ring-2', 'ring-primary/20', 'bg-primary/5');
+        const check = element.querySelector('.selected-indicator');
+        if (check) {
+            check.classList.remove('hidden');
+            check.classList.add('flex');
+        }
+
+        updateContinueButton();
+    }
+
+    function selectUrgency(urgency, element) {
+        chosenUrgency = urgency;
+
+        document.querySelectorAll('.urgency-card').forEach(card => {
+            card.className = 'urgency-card p-4 rounded-2xl border cursor-pointer flex items-center gap-3 hover:border-primary transition-all';
+            card.style.background = 'var(--bg-card)';
+            card.style.borderColor = 'var(--border)';
+        });
+
+        element.className = 'urgency-card p-4 rounded-2xl border cursor-pointer flex items-center gap-3 border-primary bg-primary/10 text-primary font-bold shadow-sm';
+        element.style.background = '';
+        element.style.borderColor = '';
+    }
+
+    function updateContinueButton() {
+        const btn = document.getElementById('btn-continue');
+        if (chosenCategory) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.classList.add('hover:shadow-lg', 'hover:-translate-y-0.5');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function proceedToFullForm() {
+        if (!chosenCategory) return;
+        const encodedCat = encodeURIComponent(chosenCategory);
+        const encodedUrg = encodeURIComponent(chosenUrgency);
+        window.location.href = `/file-complaint?category=${encodedCat}&urgency=${encodedUrg}`;
+    }
+
+    function filterCategories() {
+        const query = document.getElementById('category-search').value.toLowerCase().trim();
+        document.querySelectorAll('.category-card').forEach(card => {
+            const keywords = card.getAttribute('data-keywords') || '';
+            const title = card.querySelector('h3').innerText.toLowerCase();
+            const desc = card.querySelector('p').innerText.toLowerCase();
+            if (!query || keywords.includes(query) || title.includes(query) || desc.includes(query)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Auto-select first card if user desires fast navigation
+    document.addEventListener('DOMContentLoaded', () => {
+        // Render lucide icons
+        if (window.lucide) window.lucide.createIcons();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,277 @@
+// CiviFix - Community Complaint Management System
+// Prisma Schema Definition for Integrity, Fraud, Spam & Duplicate Detection
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  citizen
+  admin
+}
+
+enum ComplaintStatus {
+  Pending
+  Under_Review @map("Under Review")
+  In_Progress  @map("In Progress")
+  Resolved
+  Rejected
+}
+
+enum IntegrityStatus {
+  PENDING
+  ACCEPTED
+  REVIEW_REQUIRED
+  REJECTED
+  FLAGGED_DUPLICATE
+}
+
+enum RiskDecision {
+  ACCEPT
+  REVIEW
+  REJECT
+}
+
+enum SignalType {
+  SPAM_TEXT
+  DUPLICATE_COMPLAINT
+  DUPLICATE_IMAGE
+  LOCATION_MISMATCH
+  REPEATED_EVIDENCE
+  ABNORMAL_FREQUENCY
+  SUSPICIOUS_METADATA
+  POOR_IMAGE_QUALITY
+  RAPID_SUBMISSION
+  BEHAVIORAL_ANOMALY
+  POSSIBLE_MANIPULATION
+}
+
+model User {
+  id            Int             @id @default(autoincrement())
+  username      String          @unique
+  passwordHash  String          @map("password_hash")
+  fullName      String          @map("full_name")
+  email         String
+  phone         String?
+  role          Role            @default(citizen)
+  createdAt     DateTime        @default(now()) @map("created_at")
+
+  complaints    Complaint[]
+  updates       ComplaintUpdate[]
+  reviews       IntegrityReview[]
+  riskProfile   UserRiskProfile?
+
+  @@map("users")
+}
+
+model Complaint {
+  id                   Int             @id @default(autoincrement())
+  citizenId            Int             @map("citizen_id")
+  title                String
+  category             String
+  description          String
+  location             String
+  latitude             Float?
+  longitude            Float?
+  imagePath            String?         @map("image_path")
+  status               ComplaintStatus @default(Pending)
+  integrityStatus      IntegrityStatus @default(PENDING) @map("integrity_status")
+  department           String?
+  resolutionImagePath  String?         @map("resolution_image_path")
+  aiCategory           String?         @map("ai_category")
+  aiPriority           String?         @map("ai_priority")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  citizen              User            @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  updates              ComplaintUpdate[]
+  feedback             Feedback?
+  riskAssessments      ComplaintRiskAssessment[]
+  imageFingerprints    ImageFingerprint[]
+  spamResults          SpamDetectionResult[]
+  primarySimilarities  ComplaintSimilarity[]   @relation("PrimaryComplaint")
+  similarToComplaints  ComplaintSimilarity[]   @relation("SimilarComplaint")
+  integrityReviews     IntegrityReview[]
+
+  @@map("complaints")
+}
+
+model ComplaintUpdate {
+  id           Int              @id @default(autoincrement())
+  complaintId  Int              @map("complaint_id")
+  authorId     Int              @map("author_id")
+  statusFrom   ComplaintStatus? @map("status_from")
+  statusTo     ComplaintStatus? @map("status_to")
+  message      String?
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  complaint    Complaint        @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  author       User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("complaint_updates")
+}
+
+model Feedback {
+  id           Int       @id @default(autoincrement())
+  complaintId  Int       @unique @map("complaint_id")
+  rating       Int
+  comments     String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  complaint    Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@map("feedback")
+}
+
+model ComplaintRiskAssessment {
+  id              Int           @id @default(autoincrement())
+  complaintId     Int           @map("complaint_id")
+  riskScore       Float         @map("risk_score")
+  decision        RiskDecision  @default(REVIEW)
+  pipelineVersion String        @default("1.0.0") @map("pipeline_version")
+  signalsSummary  String?       @map("signals_summary")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  complaint       Complaint     @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  signals         FraudSignal[]
+
+  @@map("complaint_risk_assessments")
+}
+
+model FraudSignal {
+  id               Int                     @id @default(autoincrement())
+  riskAssessmentId Int                     @map("risk_assessment_id")
+  type             SignalType
+  score            Float
+  weight           Float                   @default(1.0)
+  explanation      String
+  metadata         String?
+  createdAt        DateTime                @default(now()) @map("created_at")
+
+  riskAssessment   ComplaintRiskAssessment @relation(fields: [riskAssessmentId], references: [id], onDelete: Cascade)
+
+  @@map("fraud_signals")
+}
+
+model ImageFingerprint {
+  id                  Int               @id @default(autoincrement())
+  complaintId         Int               @map("complaint_id")
+  imagePath           String            @map("image_path")
+  sha256              String            @unique
+  phash               String?           @map("phash")
+  dhash               String?           @map("dhash")
+  ahash               String?           @map("ahash")
+  embeddingReference  String?           @map("embedding_reference")
+  imageWidth          Int?              @map("image_width")
+  imageHeight         Int?              @map("image_height")
+  fileSizeBytes       Int?              @map("file_size_bytes")
+  mimeType            String?           @map("mime_type")
+  exifTimestamp       DateTime?         @map("exif_timestamp")
+  exifLatitude        Float?            @map("exif_latitude")
+  exifLongitude       Float?            @map("exif_longitude")
+  exifCameraModel     String?           @map("exif_camera_model")
+  qualityWarning      String?           @map("quality_warning")
+  isManipulated       Boolean           @default(false) @map("is_manipulated")
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  complaint           Complaint         @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  similaritiesSource  ImageSimilarity[] @relation("SourceImage")
+  similaritiesTarget  ImageSimilarity[] @relation("TargetImage")
+
+  @@map("image_fingerprints")
+}
+
+model ImageSimilarity {
+  id                 Int               @id @default(autoincrement())
+  sourceImageId      Int               @map("source_image_id")
+  targetImageId      Int               @map("target_image_id")
+  similarityScore    Float             @map("similarity_score")
+  method             String
+  isCrossComplaint   Boolean           @default(false) @map("is_cross_complaint")
+  createdAt          DateTime          @default(now()) @map("created_at")
+
+  sourceImage        ImageFingerprint  @relation("SourceImage", fields: [sourceImageId], references: [id], onDelete: Cascade)
+  targetImage        ImageFingerprint  @relation("TargetImage", fields: [targetImageId], references: [id], onDelete: Cascade)
+
+  @@map("image_similarities")
+}
+
+model ComplaintSimilarity {
+  id                 Int        @id @default(autoincrement())
+  complaintId        Int        @map("complaint_id")
+  similarComplaintId Int        @map("similar_complaint_id")
+  similarityScore    Float      @map("similarity_score")
+  distanceMeters     Float?     @map("distance_meters")
+  reason             String
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  complaint          Complaint  @relation("PrimaryComplaint", fields: [complaintId], references: [id], onDelete: Cascade)
+  similarComplaint   Complaint  @relation("SimilarComplaint", fields: [similarComplaintId], references: [id], onDelete: Cascade)
+
+  @@map("complaint_similarities")
+}
+
+model SpamDetectionResult {
+  id               Int       @id @default(autoincrement())
+  complaintId      Int       @map("complaint_id")
+  spamScore        Float     @map("spam_score")
+  riskTier         String    @map("risk_tier") // Low, Medium, High, Critical
+  repeatedCharRatio Float?   @map("repeated_char_ratio")
+  entropyScore     Float?    @map("entropy_score")
+  containsPromoUrl Boolean   @default(false) @map("contains_promo_url")
+  flaggedReasons   String?   @map("flagged_reasons")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  complaint        Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@map("spam_detection_results")
+}
+
+model IntegrityReview {
+  id           Int       @id @default(autoincrement())
+  complaintId  Int       @map("complaint_id")
+  reviewerId   Int?      @map("reviewer_id")
+  action       String    // APPROVE, REJECT, MARK_DUPLICATE, REQUEST_MORE_INFO, SUSPEND, RESTORE
+  reviewNotes  String?   @map("review_notes")
+  priorDecision String?  @map("prior_decision")
+  finalDecision String   @map("final_decision")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  complaint    Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  reviewer     User?     @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@map("integrity_reviews")
+}
+
+model UserRiskProfile {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @unique @map("user_id")
+  behavioralRiskScore Float     @default(0.0) @map("behavioral_risk_score")
+  complaintCountTotal Int       @default(0) @map("complaint_count_total")
+  complaintCountHour  Int       @default(0) @map("complaint_count_hour")
+  rejectedCount       Int       @default(0) @map("rejected_count")
+  spamCount           Int       @default(0) @map("spam_count")
+  duplicateCount      Int       @default(0) @map("duplicate_count")
+  lastSubmissionAt    DateTime? @map("last_submission_at")
+  captchaRequired     Boolean   @default(false) @map("captcha_required")
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_risk_profiles")
+}
+
+model RateLimitRecord {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique // e.g. "ip:127.0.0.1" or "user:12"
+  hits        Int      @default(1)
+  windowStart DateTime @default(now()) @map("window_start")
+  expiresAt   DateTime @map("expires_at")
+
+  @@map("rate_limit_records")
+}

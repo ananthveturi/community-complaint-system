@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Complaint Integrity & Fraud Detection - Admin Command Center{% endblock %}
+
+{% block content %}
+<div class="space-y-8 animate-fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                    Security & Fraud Protection
+                </span>
+                <span class="text-xs font-semibold" style="color:var(--text-muted);">Multi-Signal Pipeline v1.0</span>
+            </div>
+            <h1 class="text-3xl font-extrabold tracking-tight" style="color:var(--text-primary);">Complaint Integrity & Abuse Detection</h1>
+            <p class="text-sm mt-1" style="color:var(--text-muted);">Automated detection of text spam, perceptual duplicate images, copy-paste abuse, and geofence mismatches.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="/admin/dashboard" class="px-4 py-2.5 rounded-xl border text-sm font-semibold hover:border-primary transition-all flex items-center gap-2" style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Ops Dashboard
+            </a>
+            <a href="/complaint-map" class="px-4 py-2.5 rounded-xl border text-sm font-semibold hover:border-primary transition-all flex items-center gap-2" style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);">
+                <i data-lucide="map-pin" class="w-4 h-4 text-primary"></i> Complaint Map
+            </a>
+        </div>
+    </div>
+
+    <!-- Integrity KPI Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="p-4 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="text-xs font-semibold" style="color:var(--text-muted);">Total Analyzed</div>
+            <div class="text-2xl font-black mt-1" style="color:var(--text-primary);">{{ data.total_analyzed }}</div>
+            <div class="text-[10px] text-primary font-bold mt-1">100% Pipeline Inspected</div>
+        </div>
+
+        <div class="p-4 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="text-xs font-semibold" style="color:var(--text-muted);">Under Review</div>
+            <div class="text-2xl font-black mt-1 text-amber-500">{{ data.under_review }}</div>
+            <div class="text-[10px] text-amber-600 font-bold mt-1">Awaiting Human Triage</div>
+        </div>
+
+        <div class="p-4 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="text-xs font-semibold" style="color:var(--text-muted);">Spam Flagged</div>
+            <div class="text-2xl font-black mt-1 text-rose-500">{{ data.spam_detected }}</div>
+            <div class="text-[10px] text-rose-600 font-bold mt-1">Gibberish / Promos</div>
+        </div>
+
+        <div class="p-4 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="text-xs font-semibold" style="color:var(--text-muted);">Similar Complaints</div>
+            <div class="text-2xl font-black mt-1 text-cyan-500">{{ data.possible_duplicates }}</div>
+            <div class="text-[10px] text-cyan-600 font-bold mt-1">Nearby Duplicates</div>
+        </div>
+
+        <div class="p-4 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="text-xs font-semibold" style="color:var(--text-muted);">Duplicate Photos</div>
+            <div class="text-2xl font-black mt-1 text-violet-500">{{ data.duplicate_images }}</div>
+            <div class="text-[10px] text-violet-600 font-bold mt-1">pHash / Exact Matches</div>
+        </div>
+
+        <div class="p-4 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <div class="text-xs font-semibold" style="color:var(--text-muted);">False-Positive Rate</div>
+            <div class="text-2xl font-black mt-1 text-emerald-500">{{ data.false_positive_rate }}</div>
+            <div class="text-[10px] text-emerald-600 font-bold mt-1">Citizen Protection Guard</div>
+        </div>
+    </div>
+
+    <!-- Charts & Breakdown Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Risk Distribution Panel -->
+        <div class="p-6 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <h3 class="text-base font-bold mb-4 flex items-center justify-between" style="color:var(--text-primary);">
+                <span>Risk Score Distribution</span>
+                <span class="text-xs font-normal" style="color:var(--text-muted);">Total: {{ data.total_analyzed }} cases</span>
+            </h3>
+
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-emerald-500 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Low Risk (0–29) - Accept</span>
+                        <span style="color:var(--text-primary);">{{ data.risk_distribution.low }}</span>
+                    </div>
+                    <div class="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div class="h-full bg-emerald-500 rounded-full" style="width:{% if data.total_analyzed > 0 %}{{ (data.risk_distribution.low / data.total_analyzed * 100)|round }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-amber-500 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Medium Risk (30–59) - Review</span>
+                        <span style="color:var(--text-primary);">{{ data.risk_distribution.medium }}</span>
+                    </div>
+                    <div class="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div class="h-full bg-amber-500 rounded-full" style="width:{% if data.total_analyzed > 0 %}{{ (data.risk_distribution.medium / data.total_analyzed * 100)|round }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-orange-500 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span> High Risk (60–79) - Urgent Review</span>
+                        <span style="color:var(--text-primary);">{{ data.risk_distribution.high }}</span>
+                    </div>
+                    <div class="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div class="h-full bg-orange-500 rounded-full" style="width:{% if data.total_analyzed > 0 %}{{ (data.risk_distribution.high / data.total_analyzed * 100)|round }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-rose-500 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Critical Risk (80–100) - Reject / Action</span>
+                        <span style="color:var(--text-primary);">{{ data.risk_distribution.critical }}</span>
+                    </div>
+                    <div class="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div class="h-full bg-rose-500 rounded-full" style="width:{% if data.total_analyzed > 0 %}{{ (data.risk_distribution.critical / data.total_analyzed * 100)|round }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Triggered Signals -->
+        <div class="p-6 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <h3 class="text-base font-bold mb-4 flex items-center justify-between" style="color:var(--text-primary);">
+                <span>Top Triggered Fraud Signals</span>
+                <span class="text-xs font-normal" style="color:var(--text-muted);">Signals Active</span>
+            </h3>
+
+            {% if data.top_signals %}
+                <div class="space-y-3">
+                    {% for sig in data.top_signals %}
+                        <div class="p-3 rounded-xl border flex items-center justify-between" style="background:var(--bg-input);border-color:var(--border);">
+                            <div class="flex items-center gap-3">
+                                <span class="w-2 h-2 rounded-full bg-primary"></span>
+                                <div>
+                                    <h4 class="text-xs font-bold font-mono text-primary">{{ sig.type }}</h4>
+                                    <p class="text-[11px]" style="color:var(--text-muted);">Avg Impact: +{{ sig.avg_score|round(1) }} pts</p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">
+                                {{ sig.count }} times
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8" style="color:var(--text-muted);">
+                    <i data-lucide="shield-check" class="w-10 h-10 mx-auto text-emerald-500 mb-2"></i>
+                    <p class="text-sm">No suspicious abuse patterns recorded yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Human Review Queue Table -->
+    <div class="rounded-2xl border overflow-hidden shadow-sm" style="background:var(--bg-card);border-color:var(--border);">
+        <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--border);">
+            <div>
+                <h3 class="text-base font-bold" style="color:var(--text-primary);">Human Review Queue ({{ data.reviews_queue|length }})</h3>
+                <p class="text-xs mt-0.5" style="color:var(--text-muted);">Grievances flagged with medium or high risk scores requiring officer verification.</p>
+            </div>
+        </div>
+
+        {% if data.reviews_queue %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b text-xs font-bold uppercase tracking-wider" style="background:var(--bg-input);border-color:var(--border);color:var(--text-muted);">
+                            <th class="p-4">Case #</th>
+                            <th class="p-4">Citizen</th>
+                            <th class="p-4">Title / Category</th>
+                            <th class="p-4">Risk Score</th>
+                            <th class="p-4">Triggered Signals</th>
+                            <th class="p-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" style="border-color:var(--border);">
+                        {% for comp in data.reviews_queue %}
+                            <tr class="hover:bg-[var(--bg-card-hover)] transition-colors">
+                                <td class="p-4 font-bold text-primary">#{{ comp.id }}</td>
+                                <td class="p-4">
+                                    <div class="font-bold" style="color:var(--text-primary);">{{ comp.citizen_name }}</div>
+                                    <div class="text-xs" style="color:var(--text-muted);">{{ comp.citizen_email }}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="font-semibold line-clamp-1" style="color:var(--text-primary);">{{ comp.title }}</div>
+                                    <span class="inline-block mt-1 text-[11px] px-2 py-0.5 rounded border" style="background:var(--bg-input);border-color:var(--border);color:var(--text-secondary);">
+                                        {{ comp.category }}
+                                    </span>
+                                </td>
+                                <td class="p-4">
+                                    {% set rs = comp.risk_score or 0 %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold
+                                        {% if rs >= 70 %}bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200
+                                        {% elif rs >= 40 %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200
+                                        {% else %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200{% endif %}">
+                                        {{ rs|round(1) }} / 100
+                                    </span>
+                                </td>
+                                <td class="p-4 max-w-xs">
+                                    <p class="text-xs line-clamp-2" style="color:var(--text-muted);">
+                                        {{ comp.signals_summary or 'Awaiting initial evaluation' }}
+                                    </p>
+                                </td>
+                                <td class="p-4 text-right">
+                                    <a href="/admin/integrity/review/{{ comp.id }}" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white btn-brand">
+                                        Inspect Case <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-12 text-center" style="color:var(--text-muted);">
+                <i data-lucide="check-circle-2" class="w-12 h-12 mx-auto text-emerald-500 mb-3"></i>
+                <h4 class="text-base font-bold" style="color:var(--text-primary);">Review Queue is Clear</h4>
+                <p class="text-xs mt-1">No grievances currently require integrity verification.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Review Actions Audit Log -->
+    {% if data.recent_reviews %}
+        <div class="p-6 rounded-2xl border" style="background:var(--bg-card);border-color:var(--border);">
+            <h3 class="text-base font-bold mb-3" style="color:var(--text-primary);">Recent Administrative Integrity Decisions</h3>
+            <div class="divide-y text-xs" style="border-color:var(--border);">
+                {% for rev in data.recent_reviews %}
+                    <div class="py-2.5 flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-primary">#{{ rev.complaint_id }}</span>: 
+                            <span style="color:var(--text-primary);">{{ rev.complaint_title }}</span> &mdash;
+                            <span class="font-bold uppercase {% if rev.action == 'APPROVE' %}text-emerald-500{% elif rev.action == 'REJECT' %}text-rose-500{% else %}text-amber-500{% endif %}">{{ rev.action }}</span>
+                            <span style="color:var(--text-muted);">({{ rev.review_notes or 'No notes recorded' }})</span>
+                        </div>
+                        <div style="color:var(--text-muted);">
+                            By <strong>{{ rev.reviewer_name or 'Admin' }}</strong> on {{ rev.created_at[:16] }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
