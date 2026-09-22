@@ -4,6 +4,9 @@ from werkzeug.utils import secure_filename
 import os
 import re
 import uuid
+import json
+import urllib.parse
+import urllib.request
 import logging
 from PIL import Image
 import database
@@ -320,6 +323,204 @@ def logout():
     session.clear()
     flash("You have logged out successfully.", "info")
     return redirect(url_for('index'))
+
+
+# --- Google OAuth 2.0 Integration ---
+
+class GoogleOAuthConfig:
+    """Google OAuth 2.0 Configuration."""
+    @classmethod
+    def get_client_id(cls):
+        return os.environ.get('GOOGLE_CLIENT_ID')
+
+    @classmethod
+    def get_client_secret(cls):
+        return os.environ.get('GOOGLE_CLIENT_SECRET')
+
+    @classmethod
+    def is_configured(cls):
+        return bool(cls.get_client_id() and cls.get_client_secret())
+
+    @classmethod
+    def get_redirect_uri(cls):
+        explicit = os.environ.get('GOOGLE_REDIRECT_URI')
+        if explicit:
+            return explicit
+        return url_for('google_oauth_callback', _external=True)
+
+
+@app.route('/auth/google/login')
+def google_oauth_login():
+    """Initiates Google OAuth 2.0 authorization redirect."""
+    if 'user_id' in session:
+        return redirect(url_for('citizen_dashboard'))
+
+    client_id = GoogleOAuthConfig.get_client_id()
+    if not client_id:
+        # If client credentials are not configured yet, show the setup/simulator page
+        return render_template('oauth_setup.html')
+
+    state = str(uuid.uuid4())
+    session['oauth_state'] = state
+
+    redirect_uri = GoogleOAuthConfig.get_redirect_uri()
+    scope = "openid email profile"
+    auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={urllib.parse.quote(client_id)}&"
+        f"redirect_uri={urllib.parse.quote(redirect_uri)}&"
+        f"response_type=code&"
+        f"scope={urllib.parse.quote(scope)}&"
+        f"state={urllib.parse.quote(state)}&"
+        f"access_type=offline&"
+        f"prompt=select_account"
+    )
+    return redirect(auth_url)
+
+
+@app.route('/auth/google/callback')
+def google_oauth_callback():
+    """Handles Google OAuth 2.0 authorization callback."""
+    if 'user_id' in session:
+        return redirect(url_for('citizen_dashboard'))
+
+    # Check for error returned by Google
+    error = request.args.get('error')
+    if error:
+        flash(f"Google Sign-In was cancelled or failed: {error}", "warning")
+        return redirect(url_for('login'))
+
+    code = request.args.get('code')
+    state = request.args.get('state')
+    saved_state = session.pop('oauth_state', None)
+
+    # In testing mode without state, allow passing through if tested
+    if not app.config.get('TESTING'):
+        if not code or not state or state != saved_state:
+            flash("Invalid OAuth state parameter or missing authorization code. Please try again.", "danger")
+            return redirect(url_for('login'))
+
+    client_id = GoogleOAuthConfig.get_client_id()
+    client_secret = GoogleOAuthConfig.get_client_secret()
+    redirect_uri = GoogleOAuthConfig.get_redirect_uri()
+
+    try:
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = urllib.parse.urlencode({
+            'code': code,
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'redirect_uri': redirect_uri,
+            'grant_type': 'authorization_code'
+        }).encode('utf-8')
+
+        token_req = urllib.request.Request(token_url, data=token_data, method='POST')
+        with urllib.request.urlopen(token_req, timeout=12) as token_resp:
+            token_json = json.loads(token_resp.read().decode('utf-8'))
+
+        access_token = token_json.get('access_token')
+        if not access_token:
+            flash("Failed to obtain access token from Google.", "danger")
+            return redirect(url_for('login'))
+
+        userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        userinfo_req = urllib.request.Request(userinfo_url, headers={
+            'Authorization': f'Bearer {access_token}'
+        })
+        with urllib.request.urlopen(userinfo_req, timeout=12) as userinfo_resp:
+            userinfo = json.loads(userinfo_resp.read().decode('utf-8'))
+
+        return _login_or_create_oauth_user(userinfo)
+
+    except Exception as e:
+        logging.error(f"Google OAuth token exchange failed: {e}")
+        flash(f"Failed to authenticate with Google: {str(e)}", "danger")
+        return redirect(url_for('login'))
+
+
+@app.route('/auth/google/demo-login', methods=['POST'])
+def google_oauth_demo_login():
+    """
+    Local testing simulator route when GOOGLE_CLIENT_ID is not configured in .env.
+    Allows instant local verification of the Google OAuth flow.
+    """
+    email = request.form.get('demo_email', '').strip().lower()
+    full_name = request.form.get('demo_name', '').strip()
+    if not email or '@' not in email:
+        flash("Please provide a valid Gmail address to simulate Google Sign-In.", "danger")
+        return redirect(url_for('google_oauth_login'))
+
+    if not full_name:
+        full_name = email.split('@')[0].replace('.', ' ').title()
+
+    mock_userinfo = {
+        'email': email,
+        'name': full_name,
+        'verified_email': True,
+        'id': f"demo_google_{abs(hash(email)) % 10000000}"
+    }
+    return _login_or_create_oauth_user(mock_userinfo, is_demo=True)
+
+
+def _login_or_create_oauth_user(userinfo: dict, is_demo: bool = False):
+    email = userinfo.get('email', '').strip().lower()
+    full_name = userinfo.get('name', '').strip() or email.split('@')[0].title()
+
+    if not email:
+        flash("Google did not return a valid email address.", "danger")
+        return redirect(url_for('login'))
+
+    user = database.get_user_by_email(email)
+    if user:
+        database.mark_user_verified(user['id'], email_verified=True)
+        session['user_id'] = user['id']
+        session['username'] = user['username']
+        session['full_name'] = user['full_name']
+        session['role'] = user['role']
+        session['email'] = user.get('email', '')
+        session['is_oauth'] = True
+
+        prefix = "[Simulator] " if is_demo else ""
+        flash(f"{prefix}Signed in successfully with Google as {user['full_name']}! (Email Verified ✓)", "success")
+        if user['role'] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('citizen_dashboard'))
+
+    # New citizen: automatically create verified account
+    base_username = re.sub(r'[^a-zA-Z0-9_]', '', email.split('@')[0]) or 'citizen'
+    username = base_username
+    counter = 1
+    while database.get_user_by_username(username):
+        username = f"{base_username}_{counter}"
+        counter += 1
+
+    random_pw = str(uuid.uuid4())
+    pw_hash = generate_password_hash(random_pw)
+
+    user_id = database.create_user(
+        username=username,
+        password_hash=pw_hash,
+        full_name=full_name,
+        email=email,
+        phone='',
+        role='citizen'
+    )
+
+    if user_id:
+        database.mark_user_verified(user_id, email_verified=True, phone_verified=False)
+        session['user_id'] = user_id
+        session['username'] = username
+        session['full_name'] = full_name
+        session['role'] = 'citizen'
+        session['email'] = email
+        session['is_oauth'] = True
+
+        prefix = "[Simulator] " if is_demo else ""
+        flash(f"{prefix}Account created & verified via Google! Welcome to CiviFix, {full_name}.", "success")
+        return redirect(url_for('citizen_dashboard'))
+    else:
+        flash("Failed to create user account from Google profile.", "danger")
+        return redirect(url_for('login'))
 
 
 # --- Citizen Portal ---

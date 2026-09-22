@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Google OAuth 2.0 Setup & Simulator - CiviFix{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden" style="background:var(--bg-body);">
+    <div class="aura-violet" style="top:-80px;left:25%;"></div>
+    <div class="aura-pink" style="bottom:-60px;right:15%;"></div>
+
+    <div class="sm:mx-auto sm:w-full sm:max-w-xl relative z-10 animate-fade-in-up">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <div class="mx-auto w-14 h-14 bg-white dark:bg-slate-800 shadow-md rounded-2xl flex items-center justify-center mb-4 border border-slate-200 dark:border-slate-700">
+                <svg class="w-8 h-8" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-extrabold tracking-tight" style="color:var(--text-primary);">Google OAuth 2.0 Ready</h2>
+            <p class="mt-1 text-sm" style="color:var(--text-secondary);">
+                Industry-standard 1-click Google authentication with instant Gmail verification.
+            </p>
+        </div>
+
+        <!-- Setup Card -->
+        <div class="py-6 px-6 border rounded-2xl shadow-soft space-y-6" style="background:var(--bg-card);border-color:var(--border);">
+            
+            <!-- Live Simulator -->
+            <div class="p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 space-y-3">
+                <div class="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold text-sm">
+                    <i data-lucide="zap" class="w-4 h-4 text-indigo-600"></i>
+                    <span>Test Google Sign-In (Simulator)</span>
+                </div>
+                <p class="text-xs text-indigo-900/80 dark:text-indigo-200">
+                    Test the complete OAuth 2.0 citizen creation, session login, and verified status immediately without waiting for Google Cloud credentials:
+                </p>
+                <form action="/auth/google/demo-login" method="POST" class="space-y-3 pt-1">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1" style="color:var(--text-secondary);">Your Gmail Address:</label>
+                        <input type="email" name="demo_email" required value="citizen.tester@gmail.com"
+                            class="block w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1" style="color:var(--text-secondary);">Full Name (Optional):</label>
+                        <input type="text" name="demo_name" value="Aarav Sharma"
+                            class="block w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                            style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);">
+                    </div>
+                    <button type="submit" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+                        <i data-lucide="arrow-right-circle" class="w-4 h-4"></i> Simulate Instant Google Sign-In
+                    </button>
+                </form>
+            </div>
+
+            <!-- How to Connect Production Google Cloud Credentials -->
+            <div class="space-y-3 pt-2 border-t" style="border-color:var(--border);">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <i data-lucide="settings" class="w-3.5 h-3.5 text-primary"></i> Connect Live Google Cloud Credentials
+                </div>
+                <ol class="text-xs text-slate-600 dark:text-slate-300 space-y-2 list-decimal list-inside leading-relaxed">
+                    <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-primary font-semibold hover:underline">Google Cloud Console &rarr; Credentials</a>.</li>
+                    <li>Click <strong>Create Credentials</strong> &rarr; <strong>OAuth Client ID</strong> (Application type: <em>Web Application</em>).</li>
+                    <li>Under <strong>Authorized redirect URIs</strong>, add:
+                        <code class="block mt-1 font-mono text-[11px] p-1.5 rounded bg-slate-100 dark:bg-slate-800 text-primary border border-slate-200 dark:border-slate-700">http://localhost:5000/auth/google/callback</code>
+                    </li>
+                    <li>Add your Client ID & Secret to your <code class="font-bold">.env</code> file:
+                        <pre class="mt-1 font-mono text-[11px] p-2 rounded bg-slate-900 text-slate-100 overflow-x-auto">GOOGLE_CLIENT_ID=your_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_secret</pre>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="pt-2 text-center border-t" style="border-color:var(--border);">
+                <a href="/login" class="text-xs font-semibold text-primary hover:underline">&larr; Return to Standard Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
