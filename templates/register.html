@@ -88,11 +88,11 @@
                         <!-- Email OTP Input Box (initially hidden) -->
                         <div id="box-email-otp" class="hidden mt-3 pt-3 border-t space-y-2" style="border-color:var(--border);">
                             <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit code sent to your email:</span>
+                                <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit code received on your email:</span>
                                 <span id="timer-email-otp" class="text-[11px] text-slate-400"></span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <input type="text" id="email_otp" name="email_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                <input type="text" id="email_otp" name="email_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="off"
                                     class="w-36 px-3 py-1.5 border rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                                     style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
                                     placeholder="------">
@@ -100,7 +100,7 @@
                                     Confirm Code
                                 </button>
                             </div>
-                            <div id="email-dev-tip" class="hidden text-[11px] text-indigo-600 font-semibold mt-1"></div>
+                            <div id="email-otp-status" class="hidden text-[11px] font-medium mt-1"></div>
                         </div>
                     </div>
 
@@ -133,11 +133,11 @@
                         <!-- Phone OTP Input Box (initially hidden) -->
                         <div id="box-phone-otp" class="hidden mt-3 pt-3 border-t space-y-2" style="border-color:var(--border);">
                             <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit SMS code:</span>
+                                <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit code received via SMS:</span>
                                 <span id="timer-phone-otp" class="text-[11px] text-slate-400"></span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <input type="text" id="phone_otp" name="phone_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                <input type="text" id="phone_otp" name="phone_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="off"
                                     class="w-36 px-3 py-1.5 border rounded-xl font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                                     style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
                                     placeholder="------">
@@ -145,7 +145,7 @@
                                     Confirm Code
                                 </button>
                             </div>
-                            <div id="phone-dev-tip" class="hidden text-[11px] text-indigo-600 font-semibold mt-1"></div>
+                            <div id="phone-otp-status" class="hidden text-[11px] font-medium mt-1"></div>
                         </div>
                     </div>
                 </div>
@@ -212,13 +212,15 @@
             btn.textContent = "Resend Code";
             if (data.success) {
                 document.getElementById('box-email-otp').classList.remove('hidden');
-                if (data.dev_otp) {
-                    const tip = document.getElementById('email-dev-tip');
-                    tip.innerHTML = `Test Mode Code: <strong>${data.dev_otp}</strong> (Auto-filled)`;
-                    tip.classList.remove('hidden');
-                    document.getElementById('email_otp').value = data.dev_otp;
+                document.getElementById('email_otp').value = '';
+                document.getElementById('email_otp').focus();
+                const statusDiv = document.getElementById('email-otp-status');
+                if (statusDiv) {
+                    statusDiv.className = "text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1";
+                    statusDiv.textContent = data.message || `A 6-digit verification code was sent to ${email}. Check your inbox / spam.`;
+                    statusDiv.classList.remove('hidden');
                 }
-                alert(`Verification code dispatched to ${email}. Check your inbox / spam.`);
+                alert(data.message || `Verification code dispatched to ${email}. Check your inbox and spam folder, then enter the 6-digit code.`);
             } else {
                 alert(data.error || "Failed to send email verification code.");
             }
@@ -234,7 +236,7 @@
         const email = document.getElementById('email').value.trim();
         const code = document.getElementById('email_otp').value.trim();
         if (code.length !== 6) {
-            alert("Please enter the 6-digit Email OTP.");
+            alert("Please enter the complete 6-digit Email OTP received in your inbox.");
             return;
         }
 
@@ -286,13 +288,15 @@
             btn.textContent = "Resend Code";
             if (data.success) {
                 document.getElementById('box-phone-otp').classList.remove('hidden');
-                if (data.dev_otp) {
-                    const tip = document.getElementById('phone-dev-tip');
-                    tip.innerHTML = `Test Mode Code: <strong>${data.dev_otp}</strong> (Auto-filled)`;
-                    tip.classList.remove('hidden');
-                    document.getElementById('phone_otp').value = data.dev_otp;
+                document.getElementById('phone_otp').value = '';
+                document.getElementById('phone_otp').focus();
+                const statusDiv = document.getElementById('phone-otp-status');
+                if (statusDiv) {
+                    statusDiv.className = "text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1";
+                    statusDiv.textContent = data.message || `A 6-digit verification code was sent to ${phone} via SMS.`;
+                    statusDiv.classList.remove('hidden');
                 }
-                alert(`Verification code dispatched to ${phone}. Check your SMS.`);
+                alert(data.message || `Verification code dispatched to ${phone}. Check your SMS, then enter the 6-digit code.`);
             } else {
                 alert(data.error || "Failed to send phone verification code.");
             }
@@ -342,13 +346,17 @@
     if (regForm) {
         regForm.addEventListener('submit', function(e) {
             if (!isRegEmailVerified || !isRegPhoneVerified) {
-                const emailCode = document.getElementById('email_otp').value.trim();
-                const phoneCode = document.getElementById('phone_otp').value.trim();
-                if (emailCode.length === 6 && phoneCode.length === 6) {
-                    return; // Allow submission with form OTPs
-                }
                 e.preventDefault();
-                alert("Identity Verification Required: Please verify both your Email address and Phone number with OTPs before creating an account.");
+                if (!isRegEmailVerified) {
+                    alert("Please verify your Email: click 'Verify Email', enter the 6-digit code received on your email, and click 'Confirm Code'.");
+                    document.getElementById('email').focus();
+                    return;
+                }
+                if (!isRegPhoneVerified) {
+                    alert("Please verify your Phone: click 'Verify Phone', enter the 6-digit code received via SMS, and click 'Confirm Code'.");
+                    document.getElementById('phone').focus();
+                    return;
+                }
             }
         });
     }

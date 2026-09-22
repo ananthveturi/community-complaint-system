@@ -161,7 +161,9 @@ def test_flask_otp_api_and_complaint_submission_flow(monkeypatch):
                 'user_name': 'E2E Tester'
             })
             assert res_e.status_code == 200
-            otp_email = res_e.get_json()['dev_otp']
+            otp_record_e = database.get_active_otp(email, purpose='registration', target_type='email')
+            assert otp_record_e is not None
+            otp_email = otp_record_e['otp_code']
 
             res_v_e = client.post('/api/otp/verify-channel-otp', json={
                 'target': email,
@@ -189,7 +191,9 @@ def test_flask_otp_api_and_complaint_submission_flow(monkeypatch):
                 'user_name': 'E2E Tester'
             })
             assert res_p.status_code == 200
-            otp_phone = res_p.get_json()['dev_otp']
+            otp_record_p = database.get_active_otp(phone, purpose='registration', target_type='phone')
+            assert otp_record_p is not None
+            otp_phone = otp_record_p['otp_code']
 
             res_v_p = client.post('/api/otp/verify-channel-otp', json={
                 'target': phone,
@@ -225,10 +229,11 @@ def test_flask_otp_api_and_complaint_submission_flow(monkeypatch):
             # 8. Call send-complaint-otp API
             res_send = client.post('/api/otp/send-complaint-otp', json={})
             assert res_send.status_code == 200
-            send_data = res_send.get_json()
-            assert send_data['success'] is True
-            email_otp = send_data['dev_email_otp']
-            phone_otp = send_data['dev_phone_otp']
+            active_e = database.get_active_otp(email, purpose='complaint_submission', target_type='email')
+            active_p = database.get_active_otp(phone, purpose='complaint_submission', target_type='phone')
+            assert active_e is not None and active_p is not None
+            email_otp = active_e['otp_code']
+            phone_otp = active_p['otp_code']
             assert len(email_otp) == 6
             assert len(phone_otp) == 6
 
@@ -295,7 +300,9 @@ def test_flask_individual_channel_otp_complaint_flow(monkeypatch):
                 'purpose': 'complaint_submission'
             })
             assert r_e.status_code == 200
-            e_code = r_e.get_json()['dev_otp']
+            otp_record_e = database.get_active_otp('channel.user@gmail.com', purpose='complaint_submission', target_type='email')
+            assert otp_record_e is not None
+            e_code = otp_record_e['otp_code']
 
             r_ve = client.post('/api/otp/verify-channel-otp', json={
                 'target_type': 'email',
@@ -310,7 +317,9 @@ def test_flask_individual_channel_otp_complaint_flow(monkeypatch):
                 'purpose': 'complaint_submission'
             })
             assert r_p.status_code == 200
-            p_code = r_p.get_json()['dev_otp']
+            otp_record_p = database.get_active_otp('9811223344', purpose='complaint_submission', target_type='phone')
+            assert otp_record_p is not None
+            p_code = otp_record_p['otp_code']
 
             r_vp = client.post('/api/otp/verify-channel-otp', json={
                 'target_type': 'phone',

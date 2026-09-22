@@ -395,11 +395,11 @@
                                 <button type="button" id="btn-request-complaint-email-otp" onclick="requestComplaintEmailOtp()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white btn-brand flex items-center gap-1 shadow-sm">
                                     <i data-lucide="send" class="w-3 h-3"></i> <span id="btn-text-complaint-email">Verify Email</span>
                                 </button>
-                                <span id="email-complaint-dev-tip" class="hidden text-[11px] font-bold text-indigo-600"></span>
+                                <span id="email-complaint-status" class="hidden text-[11px] font-semibold text-emerald-600"></span>
                             </div>
 
                             <div id="box-complaint-email-input" class="hidden pt-2 border-t flex items-center gap-2" style="border-color:var(--border);">
-                                <input type="text" id="email_otp" name="email_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                <input type="text" id="email_otp" name="email_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="off"
                                     class="w-28 px-2.5 py-1.5 border rounded-lg font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                                     style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
                                     placeholder="------">
@@ -427,11 +427,11 @@
                                 <button type="button" id="btn-request-complaint-phone-otp" onclick="requestComplaintPhoneOtp()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white btn-brand flex items-center gap-1 shadow-sm">
                                     <i data-lucide="send" class="w-3 h-3"></i> <span id="btn-text-complaint-phone">Verify Phone</span>
                                 </button>
-                                <span id="phone-complaint-dev-tip" class="hidden text-[11px] font-bold text-indigo-600"></span>
+                                <span id="phone-complaint-status" class="hidden text-[11px] font-semibold text-emerald-600"></span>
                             </div>
 
                             <div id="box-complaint-phone-input" class="hidden pt-2 border-t flex items-center gap-2" style="border-color:var(--border);">
-                                <input type="text" id="phone_otp" name="phone_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                                <input type="text" id="phone_otp" name="phone_otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="off"
                                     class="w-28 px-2.5 py-1.5 border rounded-lg font-mono text-center font-bold tracking-widest text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                                     style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
                                     placeholder="------">
@@ -442,7 +442,7 @@
                         </div>
                     </div>
 
-                    <!-- Quick combined action & Test Banner -->
+                    <!-- Quick combined action -->
                     <div class="pt-1 flex flex-wrap items-center justify-between gap-3 border-t" style="border-color:var(--border);">
                         <div class="flex items-center gap-2">
                             <button type="button" id="btn-verify-both" onclick="verifyBothOtps()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-sm">
@@ -453,16 +453,6 @@
                         <button type="button" id="btn-send-otps" onclick="sendVerificationOtps()" class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
                             <i data-lucide="refresh-cw" class="w-3 h-3"></i> Send to Both Simultaneously
                         </button>
-                    </div>
-
-                    <div id="otp-dev-banner" class="hidden p-3 rounded-xl border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-200 text-xs">
-                        <div class="flex items-start gap-2">
-                            <i data-lucide="code" class="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5"></i>
-                            <div>
-                                <span class="font-bold">Test Environment Auto-Code:</span>
-                                <span id="otp-dev-content" class="ml-1"></span>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -887,16 +877,17 @@
             if (data.success) {
                 const box = document.getElementById('box-complaint-email-input');
                 if (box) box.classList.remove('hidden');
-                if (data.dev_otp) {
-                    const tip = document.getElementById('email-complaint-dev-tip');
-                    if (tip) {
-                        tip.innerHTML = `Test OTP: <strong>${data.dev_otp}</strong>`;
-                        tip.classList.remove('hidden');
-                    }
-                    const inp = document.getElementById('email_otp');
-                    if (inp && !inp.value) inp.value = data.dev_otp;
+                const inp = document.getElementById('email_otp');
+                if (inp) {
+                    inp.value = '';
+                    inp.focus();
                 }
-                alert(`Verification code sent to your email (${data.target}). Check your inbox / spam.`);
+                const statusSpan = document.getElementById('email-complaint-status');
+                if (statusSpan) {
+                    statusSpan.textContent = "Code sent! Check inbox / spam.";
+                    statusSpan.classList.remove('hidden');
+                }
+                alert(data.message || `Verification code sent to your email (${data.target}). Check your inbox and spam folder, then enter the 6-digit code.`);
             } else {
                 alert(data.error || "Failed to dispatch email verification code.");
             }
@@ -911,7 +902,7 @@
     function confirmComplaintEmailOtp() {
         const code = document.getElementById('email_otp').value.trim();
         if (code.length !== 6) {
-            alert("Please enter the 6-digit Email OTP.");
+            alert("Please enter the complete 6-digit Email OTP.");
             return;
         }
 
@@ -958,16 +949,17 @@
             if (data.success) {
                 const box = document.getElementById('box-complaint-phone-input');
                 if (box) box.classList.remove('hidden');
-                if (data.dev_otp) {
-                    const tip = document.getElementById('phone-complaint-dev-tip');
-                    if (tip) {
-                        tip.innerHTML = `Test OTP: <strong>${data.dev_otp}</strong>`;
-                        tip.classList.remove('hidden');
-                    }
-                    const inp = document.getElementById('phone_otp');
-                    if (inp && !inp.value) inp.value = data.dev_otp;
+                const inp = document.getElementById('phone_otp');
+                if (inp) {
+                    inp.value = '';
+                    inp.focus();
                 }
-                alert(`Verification code sent to your phone (${data.target}). Check your SMS.`);
+                const statusSpan = document.getElementById('phone-complaint-status');
+                if (statusSpan) {
+                    statusSpan.textContent = "SMS sent! Check phone.";
+                    statusSpan.classList.remove('hidden');
+                }
+                alert(data.message || `Verification code sent to your phone (${data.target}). Check your SMS, then enter the 6-digit code.`);
             } else {
                 alert(data.error || "Failed to dispatch phone verification code.");
             }
@@ -982,7 +974,7 @@
     function confirmComplaintPhoneOtp() {
         const code = document.getElementById('phone_otp').value.trim();
         if (code.length !== 6) {
-            alert("Please enter the 6-digit Phone OTP.");
+            alert("Please enter the complete 6-digit Phone OTP.");
             return;
         }
 
@@ -1015,8 +1007,6 @@
         const btn = document.getElementById('btn-send-otps');
         const btnText = document.getElementById('btn-send-otps-text');
         const timerText = document.getElementById('otp-timer-text');
-        const devBanner = document.getElementById('otp-dev-banner');
-        const devContent = document.getElementById('otp-dev-content');
         const feedback = document.getElementById('otp-verify-feedback');
 
         if (btn) btn.disabled = true;
@@ -1031,29 +1021,22 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
+                // Ensure inputs are shown and cleared for manual user entry
+                const boxE = document.getElementById('box-complaint-email-input');
+                if (boxE) boxE.classList.remove('hidden');
+                const boxP = document.getElementById('box-complaint-phone-input');
+                if (boxP) boxP.classList.remove('hidden');
+
+                const inpE = document.getElementById('email_otp');
+                if (inpE) inpE.value = '';
+                const inpP = document.getElementById('phone_otp');
+                if (inpP) inpP.value = '';
+
                 if (feedback) {
                     feedback.className = "text-xs font-semibold text-emerald-600";
-                    feedback.textContent = `Codes dispatched! Email: ${data.email} | Phone: ${data.phone}`;
+                    feedback.textContent = `Codes dispatched! Check your Gmail (${data.email}) and SMS (${data.phone}), then enter the codes below.`;
                 }
-
-                // If test environment auto-code present (when live SMTP or SMS is offline)
-                if (data.dev_email_otp || data.dev_phone_otp) {
-                    let parts = [];
-                    if (data.dev_email_otp) {
-                        parts.push(`Email OTP: <strong>${data.dev_email_otp}</strong>`);
-                        const emailInput = document.getElementById('email_otp');
-                        if (emailInput && !emailInput.value) emailInput.value = data.dev_email_otp;
-                    }
-                    if (data.dev_phone_otp) {
-                        parts.push(`Phone OTP: <strong>${data.dev_phone_otp}</strong>`);
-                        const phoneInput = document.getElementById('phone_otp');
-                        if (phoneInput && !phoneInput.value) phoneInput.value = data.dev_phone_otp;
-                    }
-                    if (devContent) devContent.innerHTML = parts.join(' &nbsp;|&nbsp; ') + " (Auto-filled for local test)";
-                    if (devBanner) devBanner.classList.remove('hidden');
-                } else {
-                    if (devBanner) devBanner.classList.add('hidden');
-                }
+                alert(`Codes dispatched! Check your Gmail (${data.email}) and SMS (${data.phone}), then manually enter the 6-digit codes.`);
 
                 startOtpCooldown(60);
             } else {

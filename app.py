@@ -394,6 +394,9 @@ def api_send_complaint_otp():
         user_name=user.get('full_name') or user.get('username', 'Citizen'),
         purpose='complaint_submission'
     )
+    if not app.config.get('TESTING'):
+        result.pop('dev_email_otp', None)
+        result.pop('dev_phone_otp', None)
     return jsonify(result)
 
 
@@ -476,6 +479,8 @@ def api_send_channel_otp():
         purpose=purpose,
         user_name=user_name
     )
+    if not app.config.get('TESTING'):
+        res.pop('dev_otp', None)
     return jsonify(res)
 
 

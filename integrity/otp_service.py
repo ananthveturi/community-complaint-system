@@ -46,19 +46,36 @@ def send_single_otp(
             target_type='email',
             expires_at=expires_at
         )
-        send_otp_email(
+        email_res = send_otp_email(
             recipient_email=cleaned,
             recipient_name=user_name,
             otp_code=otp_code,
             purpose=purpose
         )
+        live_sent = email_res.get('live_sent', False)
         live_configured = EmailConfig.is_configured()
+
+        logger.info(f"[CiviFix Security] Email OTP generated for {cleaned}: {otp_code}")
+        print(f"\n==================================================", flush=True)
+        print(f"[CIVIFIX SECURITY] 6-Digit Verification Code: {otp_code}", flush=True)
+        print(f"Target: {cleaned} (EMAIL) | Purpose: {purpose}", flush=True)
+        if not live_configured:
+            print("[NOTICE] Gmail SMTP not configured in .env. Code printed above for verification.", flush=True)
+        print(f"==================================================\n", flush=True)
+
+        if live_sent:
+            msg = f"A 6-digit verification code has been dispatched to your Gmail ({cleaned}). Please check your inbox and spam folder."
+        elif not live_configured:
+            msg = f"Verification code generated. (To receive live emails in your Gmail inbox, configure SMTP_USERNAME and SMTP_PASSWORD in .env)."
+        else:
+            msg = f"Verification code dispatched to {cleaned}."
+
         return {
             'success': True,
-            'message': f'Verification code dispatched to {cleaned}',
+            'message': msg,
             'target': cleaned,
             'target_type': 'email',
-            'live_sent': live_configured,
+            'live_sent': live_sent,
             'dev_otp': otp_code if not live_configured else None,
             'expires_in_seconds': OTP_EXPIRY_MINUTES * 60
         }
@@ -79,9 +96,23 @@ def send_single_otp(
             purpose=purpose
         )
         live_configured = SMSConfig.is_configured()
+
+        logger.info(f"[CiviFix Security] Phone OTP generated for {cleaned}: {otp_code}")
+        print(f"\n==================================================", flush=True)
+        print(f"[CIVIFIX SECURITY] 6-Digit Verification Code: {otp_code}", flush=True)
+        print(f"Target: {cleaned} (PHONE SMS) | Purpose: {purpose}", flush=True)
+        if not live_configured:
+            print("[NOTICE] SMS gateway not configured in .env. Code printed above for verification.", flush=True)
+        print(f"==================================================\n", flush=True)
+
+        if live_configured:
+            msg = f"A 6-digit verification code has been dispatched to your phone ({cleaned}) via SMS."
+        else:
+            msg = f"Verification code generated for {cleaned}. (To receive live SMS, configure Twilio credentials in .env)."
+
         return {
             'success': True,
-            'message': f'Verification code dispatched to {cleaned}',
+            'message': msg,
             'target': cleaned,
             'target_type': 'phone',
             'live_sent': live_configured,
@@ -152,7 +183,6 @@ def send_dual_otp(
         purpose=purpose
     )
 
-    # Dispatch SMS
     sms_res = send_otp_sms(
         recipient_phone=cleaned_phone,
         otp_code=phone_otp,
@@ -162,9 +192,16 @@ def send_dual_otp(
     live_smtp = EmailConfig.is_configured()
     live_sms = SMSConfig.is_configured()
 
+    logger.info(f"[CiviFix Security] Dual OTP: Email={cleaned_email}, Phone={cleaned_phone}")
+    print(f"\n==================================================", flush=True)
+    print(f"[CIVIFIX SECURITY] Dual Verification Codes Dispatched:", flush=True)
+    print(f"  Email ({cleaned_email}): {email_otp}", flush=True)
+    print(f"  Phone ({cleaned_phone}): {phone_otp}", flush=True)
+    print(f"==================================================\n", flush=True)
+
     return {
         'success': True,
-        'message': f'Verification codes sent to {cleaned_email} and {cleaned_phone}.',
+        'message': f'Verification codes sent to {cleaned_email} and {cleaned_phone}. Check your inbox / phone.',
         'email': cleaned_email,
         'phone': cleaned_phone,
         'expires_in_seconds': OTP_EXPIRY_MINUTES * 60,
