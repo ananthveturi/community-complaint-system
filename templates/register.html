@@ -53,9 +53,11 @@
             </div>
 
             <form action="/register" method="POST" id="register-form" class="space-y-5">
-                <div class="p-3 rounded-xl border mb-2 flex items-center gap-2.5 text-xs font-medium" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.2);color:var(--text-secondary);">
-                    <i data-lucide="shield-alert" class="w-4 h-4 text-primary flex-shrink-0"></i>
-                    <span>All credentials are <strong>mandatory</strong>. Complaint details, verification updates, and photos will be delivered to your registered email.</span>
+                <div class="p-3 rounded-xl border mb-2 flex items-center justify-between gap-2.5 text-xs" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.25);color:var(--text-secondary);">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="lock" class="w-4 h-4 text-amber-500 flex-shrink-0"></i>
+                        <span><strong>2-Step OTP Authentication: Locked</strong> &bull; Staged for future enhancements. Direct registration enabled.</span>
+                    </div>
                 </div>
 
                 <div>
@@ -88,17 +90,23 @@
                     </div>
                 </div>
 
-                <!-- Email & Phone with Individual OTP Verification -->
+                <!-- Email & Phone with Locked Auth Badges -->
                 <div class="space-y-4">
-                    <!-- Email Field & Verification Box -->
+                    <!-- Email Field -->
                     <div class="p-3.5 rounded-2xl border transition-all" style="background:var(--bg-input);border-color:var(--border);">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="email" class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary);">
                                 {{ _('email') }} <span class="text-rose-500 font-bold">*</span>
                             </label>
+                            {% if otp_auth_locked %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                <i data-lucide="lock" class="w-3 h-3"></i> Locked Auth (Future Enhancement)
+                            </span>
+                            {% else %}
                             <span id="reg-email-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
                                 Unverified
                             </span>
+                            {% endif %}
                         </div>
                         <div class="relative flex items-center gap-2">
                             <div class="relative flex-1">
@@ -110,12 +118,14 @@
                                     style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
                                     placeholder="you@gmail.com">
                             </div>
+                            {% if not otp_auth_locked %}
                             <button type="button" id="btn-send-email-otp" onclick="requestEmailOtp()" class="px-3 py-2.5 text-xs font-bold rounded-xl text-white btn-brand whitespace-nowrap flex items-center gap-1 shadow-sm">
                                 <i data-lucide="send" class="w-3 h-3"></i> Verify Email
                             </button>
+                            {% endif %}
                         </div>
 
-                        <!-- Email OTP Input Box (initially hidden) -->
+                        <!-- Email OTP Input Box (when unlocked) -->
                         <div id="box-email-otp" class="hidden mt-3 pt-3 border-t space-y-2" style="border-color:var(--border);">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit code received on your email:</span>
@@ -134,15 +144,21 @@
                         </div>
                     </div>
 
-                    <!-- Phone Field & Verification Box -->
+                    <!-- Phone Field -->
                     <div class="p-3.5 rounded-2xl border transition-all" style="background:var(--bg-input);border-color:var(--border);">
                         <div class="flex items-center justify-between mb-1.5">
                             <label for="phone" class="block text-xs font-semibold uppercase tracking-wider" style="color:var(--text-secondary);">
                                 {{ _('phone') }} <span class="text-rose-500 font-bold">*</span>
                             </label>
+                            {% if otp_auth_locked %}
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                <i data-lucide="lock" class="w-3 h-3"></i> Locked Auth (Future Enhancement)
+                            </span>
+                            {% else %}
                             <span id="reg-phone-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
                                 Unverified
                             </span>
+                            {% endif %}
                         </div>
                         <div class="relative flex items-center gap-2">
                             <div class="relative flex-1">
@@ -155,12 +171,14 @@
                                     style="background:var(--bg-card);border-color:var(--border);color:var(--text-primary);"
                                     placeholder="+91 9876543210">
                             </div>
+                            {% if not otp_auth_locked %}
                             <button type="button" id="btn-send-phone-otp" onclick="requestPhoneOtp()" class="px-3 py-2.5 text-xs font-bold rounded-xl text-white btn-brand whitespace-nowrap flex items-center gap-1 shadow-sm">
                                 <i data-lucide="send" class="w-3 h-3"></i> Verify Phone
                             </button>
+                            {% endif %}
                         </div>
 
-                        <!-- Phone OTP Input Box (initially hidden) -->
+                        <!-- Phone OTP Input Box (when unlocked) -->
                         <div id="box-phone-otp" class="hidden mt-3 pt-3 border-t space-y-2" style="border-color:var(--border);">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-semibold text-slate-500">Enter 6-digit code received via SMS:</span>
@@ -375,7 +393,8 @@
     const regForm = document.getElementById('register-form');
     if (regForm) {
         regForm.addEventListener('submit', function(e) {
-            if (!isRegEmailVerified || !isRegPhoneVerified) {
+            const isOtpLocked = {{ 'true' if otp_auth_locked else 'false' }};
+            if (!isOtpLocked && (!isRegEmailVerified || !isRegPhoneVerified)) {
                 e.preventDefault();
                 if (!isRegEmailVerified) {
                     alert("Please verify your Email: click 'Verify Email', enter the 6-digit code received on your email, and click 'Confirm Code'.");

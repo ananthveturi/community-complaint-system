@@ -528,6 +528,7 @@ The following manual testing scenarios can be used:
 The project can be improved in the following ways:
 
 - Add CSRF protection using Flask-WTF.
+- **[LOCKED - Future Enhancement] Multi-Factor OTP Authentication (Email & SMS)**: Interactive 6-digit one-time password verification gates during citizen registration and grievance filing. Staged in codebase with `OTP_AUTH_LOCKED=True`.
 - **[LOCKED - Future Enhancement] Google OAuth 2.0 Single Sign-On (SSO)**: 1-click citizen onboarding and verified Gmail identity authentication through Google Identity Services. Staged in codebase with `GOOGLE_OAUTH_LOCKED=True`.
 - Add email and SMS notifications for complaint updates.
 - Add map-based location selection using Google Maps or OpenStreetMap.

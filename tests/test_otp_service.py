@@ -134,7 +134,8 @@ def test_flask_otp_api_and_complaint_submission_flow(monkeypatch):
     from integrity.email_service import get_sent_emails, clear_sent_emails
 
     clear_sent_emails()
-    # Set testing flag to False to strictly enforce the live OTP gate
+    # Set OTP_AUTH_LOCKED to False and TESTING to False to strictly enforce the live OTP gate
+    monkeypatch.setenv('OTP_AUTH_LOCKED', 'False')
     orig_testing = flask_app.app.config.get('TESTING', False)
     flask_app.app.config['TESTING'] = False
 
@@ -345,3 +346,37 @@ def test_flask_individual_channel_otp_complaint_flow(monkeypatch):
             assert 'Overflowing Garbage Bin' in confirmations[0]['subject']
     finally:
         flask_app.app.config['TESTING'] = orig_testing
+
+def test_registration_and_complaint_flow_when_otp_auth_locked(monkeypatch):
+    """When OTP_AUTH_LOCKED is True (default), citizens can register and file complaints directly."""
+    import app as flask_app
+    monkeypatch.setenv('OTP_AUTH_LOCKED', 'True')
+    
+    with flask_app.app.test_client() as client:
+        # Register user directly
+        rv_reg = client.post('/register', data={
+            'username': 'direct_citizen',
+            'full_name': 'Direct Citizen',
+            'email': 'direct.citizen@gmail.com',
+            'phone': '9876501234',
+            'password': 'password123'
+        }, follow_redirects=True)
+        assert rv_reg.status_code == 200
+        assert b"Account registered successfully" in rv_reg.data
+
+        # Login
+        rv_login = client.post('/login', data={
+            'username': 'direct_citizen',
+            'password': 'password123'
+        }, follow_redirects=True)
+        assert rv_login.status_code == 200
+
+        # File grievance directly without OTP block
+        rv_comp = client.post('/file-complaint', data={
+            'title': 'Broken Streetlight on 5th Avenue',
+            'category': 'Electricity',
+            'location': '5th Avenue Near Post Office',
+            'description': 'The streetlight has been malfunctioning and dark for two days.'
+        }, follow_redirects=True)
+        assert rv_comp.status_code == 200
+        assert b"submitted successfully" in rv_comp.data

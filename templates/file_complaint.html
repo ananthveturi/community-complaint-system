@@ -359,22 +359,66 @@
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b pb-3" style="border-color:var(--border);">
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                <span class="w-6 h-6 rounded-lg {% if otp_auth_locked %}bg-amber-500/10 text-amber-600{% else %}bg-primary/10 text-primary{% endif %} flex items-center justify-center font-bold text-xs">
+                                    <i data-lucide="{% if otp_auth_locked %}lock{% else %}shield-check{% endif %}" class="w-4 h-4"></i>
                                 </span>
                                 <h3 class="text-sm font-bold" style="color:var(--text-primary);">Identity & Contact Verification</h3>
                             </div>
                             <p class="text-xs mt-0.5" style="color:var(--text-muted);">
+                                {% if otp_auth_locked %}
+                                Dual-channel OTP verification is staged for future enhancements. Grievances are submitted and tracked under your verified citizen account.
+                                {% else %}
                                 Verify your registered email and mobile phone with 6-digit OTPs before final grievance submission.
+                                {% endif %}
                             </p>
                         </div>
                         <div id="verification-status-badge">
+                            {% if otp_auth_locked %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                <i data-lucide="lock" class="w-3.5 h-3.5"></i> Locked Auth (Future Enhancement)
+                            </span>
+                            {% else %}
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
                                 <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Verification Required
                             </span>
+                            {% endif %}
                         </div>
                     </div>
 
+                    {% if otp_auth_locked %}
+                    <!-- Informative Summary Cards when Locked -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="p-3.5 rounded-xl border space-y-1.5" style="background:var(--bg-card);border-color:var(--border);">
+                            <div class="flex items-center justify-between">
+                                <div class="font-semibold text-slate-500 flex items-center gap-1.5">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5 text-primary"></i> Registered Email
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                    Locked Auth
+                                </span>
+                            </div>
+                            <div id="disp-email" class="font-bold text-sm truncate" style="color:var(--text-primary);">
+                                {{ current_user.email if current_user and current_user.email else session.get('email', 'Email not set') }}
+                            </div>
+                            <p class="text-[11px] text-slate-400">Grievance confirmation copy will be dispatched to this email address upon submission.</p>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl border space-y-1.5" style="background:var(--bg-card);border-color:var(--border);">
+                            <div class="flex items-center justify-between">
+                                <div class="font-semibold text-slate-500 flex items-center gap-1.5">
+                                    <i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-500"></i> Registered Phone
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                    Locked Auth
+                                </span>
+                            </div>
+                            <div id="disp-phone" class="font-bold text-sm truncate" style="color:var(--text-primary);">
+                                {{ current_user.phone if current_user and current_user.phone else 'Phone not set' }}
+                            </div>
+                            <p class="text-[11px] text-slate-400">Automated SMS grievance alerts staged for future enhancements.</p>
+                        </div>
+                    </div>
+                    {% else %}
                     <!-- Individual Channel Verification Panels -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                         <!-- Email Channel Box -->
@@ -454,6 +498,7 @@
                             <i data-lucide="refresh-cw" class="w-3 h-3"></i> Send to Both Simultaneously
                         </button>
                     </div>
+                    {% endif %}
                 </div>
 
                 <div class="pt-4 flex justify-between items-center border-t" style="border-color:var(--border);">
@@ -1180,13 +1225,16 @@
         });
     }
 
-    // Intercept form submission to guarantee dual verification is complete
+    // Intercept form submission to guarantee dual verification is complete (if not locked)
     const wizardForm = document.getElementById('complaint-wizard-form');
     if (wizardForm) {
         wizardForm.addEventListener('submit', function(e) {
-            if (!isDualOtpVerified) {
-                const emailOtp = document.getElementById('email_otp').value.trim();
-                const phoneOtp = document.getElementById('phone_otp').value.trim();
+            const isOtpLocked = {{ 'true' if otp_auth_locked else 'false' }};
+            if (!isOtpLocked && !isDualOtpVerified) {
+                const emailOtpEl = document.getElementById('email_otp');
+                const phoneOtpEl = document.getElementById('phone_otp');
+                const emailOtp = emailOtpEl ? emailOtpEl.value.trim() : '';
+                const phoneOtp = phoneOtpEl ? phoneOtpEl.value.trim() : '';
                 if (emailOtp.length === 6 && phoneOtp.length === 6) {
                     e.preventDefault();
                     verifyBothOtps(() => {
@@ -1207,7 +1255,8 @@
         initMap();
         const startStep = parseInt("{{ initial_step | default(1) }}", 10) || 1;
         goToStep(startStep);
-        if (startStep === 4 && !hasAutoDispatchedOtp) {
+        const isOtpLocked = {{ 'true' if otp_auth_locked else 'false' }};
+        if (!isOtpLocked && startStep === 4 && !hasAutoDispatchedOtp) {
             hasAutoDispatchedOtp = true;
             sendVerificationOtps();
         }

@@ -131,13 +131,22 @@ def save_file(file):
         print(f"[CCMS Image Verification Error] {e}")
         return None, "The uploaded file could not be securely saved. Please upload a genuine photo."
 
+def is_otp_auth_locked() -> bool:
+    """Returns True if OTP multi-factor authentication is marked locked for future enhancements."""
+    val = os.environ.get('OTP_AUTH_LOCKED', 'true').strip().lower()
+    return val not in ('0', 'false', 'no', 'off')
+
 @app.context_processor
 def utility_processor():
     def translate(key):
         lang = session.get('lang', 'en')
         lang_dict = TRANSLATIONS.get(lang, TRANSLATIONS['en'])
         return lang_dict.get(key, TRANSLATIONS['en'].get(key, key))
-    return dict(_=translate)
+    return dict(
+        _=translate,
+        otp_auth_locked=is_otp_auth_locked(),
+        google_oauth_locked=lambda: GoogleOAuthConfig.is_locked()
+    )
 
 @app.route('/set-language/<lang>')
 def set_language(lang):
@@ -262,8 +271,8 @@ def register():
                 is_phone_verified = True
                 session['reg_verified_phone'] = clean_phone_number(phone)
 
-        # Enforce verification unless in automated tests without explicit OTPs
-        if not is_testing:
+        # Enforce verification unless in automated tests without explicit OTPs or when OTP auth is locked
+        if not is_testing and not is_otp_auth_locked():
             if not is_email_verified:
                 flash("Email verification required: Please click 'Verify Email' and enter your 6-digit OTP.", "warning")
                 return render_template('register.html')
@@ -806,7 +815,7 @@ def file_complaint():
                 flash(f"Verification Failed: {verify_res.get('error')}", "danger")
                 return render_template('file_complaint.html', current_user=citizen_user, initial_step=4)
             is_verified_session = True
-        elif not is_verified_session and not is_testing:
+        elif not is_verified_session and not is_testing and not is_otp_auth_locked():
             flash("Identity verification required: Please enter the 6-digit OTP codes sent to your email and phone number.", "warning")
             return render_template('file_complaint.html', current_user=citizen_user, initial_step=4)
 
