@@ -177,13 +177,13 @@
     </div>
 
     <!-- Action Bar -->
-    <div class="pt-6 border-t flex items-center justify-between" style="border-color:var(--border);">
-        <a href="/dashboard" class="px-5 py-2.5 rounded-xl border text-sm font-semibold hover:bg-[var(--bg-card-hover)] transition-all" style="border-color:var(--border);color:var(--text-secondary);">
+    <div class="pt-6 border-t flex items-center justify-between gap-3" style="border-color:var(--border);">
+        <a href="/dashboard" class="px-4 sm:px-5 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold hover:bg-[var(--bg-card-hover)] transition-all" style="border-color:var(--border);color:var(--text-secondary);">
             Cancel
         </a>
         <button type="button" id="btn-continue" onclick="proceedToFullForm()" disabled
-                class="px-8 py-3 rounded-xl text-white font-bold text-sm btn-brand flex items-center gap-2 opacity-50 cursor-not-allowed transition-all">
-            Continue to Complaint Filing <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                class="px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl text-white font-bold text-xs sm:text-sm btn-brand flex items-center gap-1.5 sm:gap-2 opacity-50 cursor-not-allowed transition-all">
+            <span>Continue</span><span class="hidden sm:inline">&nbsp;to Complaint Filing</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
     </div>
 </div>

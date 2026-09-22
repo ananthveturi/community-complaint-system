@@ -4,7 +4,55 @@ document.addEventListener('DOMContentLoaded', () => {
     initImagePreviews();
     initAdminResolutionProofToggle();
     initLocationMapPreview();
+    initMobileNavigation();
 });
+
+function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    
+    if (btn) {
+        if (isPassword) {
+            btn.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5 text-primary"></i>';
+            btn.setAttribute('title', 'Hide password');
+            btn.setAttribute('aria-label', 'Hide password');
+        } else {
+            btn.innerHTML = '<i data-lucide="eye" class="w-5 h-5 text-slate-400 hover:text-primary"></i>';
+            btn.setAttribute('title', 'Show password');
+            btn.setAttribute('aria-label', 'Show password');
+        }
+        if (window.lucide && typeof lucide.createIcons === 'function') {
+            lucide.createIcons();
+        }
+    }
+}
+
+function initMobileNavigation() {
+    const mobileMenuBtns = document.querySelectorAll('#mobileMenuBtn, .mobile-menu-trigger');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const mobileDrawerBackdrop = document.getElementById('mobileDrawerBackdrop');
+    const mobileDrawerClose = document.getElementById('mobileDrawerClose');
+
+    const openDrawer = () => {
+        if (!mobileDrawer) return;
+        mobileDrawer.classList.remove('-translate-x-full');
+        if (mobileDrawerBackdrop) mobileDrawerBackdrop.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeDrawer = () => {
+        if (!mobileDrawer) return;
+        mobileDrawer.classList.add('-translate-x-full');
+        if (mobileDrawerBackdrop) mobileDrawerBackdrop.classList.add('hidden');
+        document.body.style.overflow = '';
+    };
+
+    mobileMenuBtns.forEach(btn => btn.addEventListener('click', openDrawer));
+    if (mobileDrawerClose) mobileDrawerClose.addEventListener('click', closeDrawer);
+    if (mobileDrawerBackdrop) mobileDrawerBackdrop.addEventListener('click', closeDrawer);
+}
 
 function initTheme() {
     // Find all toggle buttons (there may be one in public nav and one in app nav)

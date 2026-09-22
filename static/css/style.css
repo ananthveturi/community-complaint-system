@@ -279,3 +279,57 @@ nav, aside, header, main, footer,
     color: #8B5CF6;
     box-shadow: 0 0 12px -2px rgba(139,92,246,0.3);
 }
+
+/* ---------- Mobile Phone Responsiveness & Portability ---------- */
+@media (max-width: 640px) {
+    /* Prevent iOS/Android auto-zoom on input focus */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+    
+    /* Ensure touch targets are comfortable (at least 44px) */
+    button, a.btn-brand, select, input[type="button"], input[type="submit"] {
+        min-height: 44px;
+    }
+
+    /* Padding adjustments for compact phone screens */
+    .p-6 {
+        padding: 1rem !important;
+    }
+    
+    .p-8 {
+        padding: 1.25rem !important;
+    }
+
+    /* Modal / card edge spacing */
+    .max-w-7xl, .max-w-4xl, .max-w-md {
+        width: 100% !important;
+    }
+}
+
+/* Safe area insets for modern mobile displays (iPhone notch / home bar) */
+.mobile-safe-bottom {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Mobile drawer animation classes */
+#mobileDrawer {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+}
+
+#mobileDrawerBackdrop {
+    transition: opacity 0.25s ease;
+}
+
+/* Data table horizontal scroll wrapper */
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Multi-step progress bar styling */
+.wizard-step-progress {
+    transition: width 0.35s ease-in-out;
+}

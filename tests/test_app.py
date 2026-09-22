@@ -268,3 +268,50 @@ def test_email_dispatch_on_complaint_submission(client, tmp_path):
     assert 'Dangerous Pothole on Oak Ave' in last_email['subject']
     assert last_email['has_image'] is True
     assert last_email['image_filename'] is not None
+
+
+def test_password_visibility_toggle_and_mobile_elements(client):
+    """Verify password toggle (eye symbol) and mobile drawer elements exist in markup."""
+    # Login page
+    rv = client.get('/login')
+    assert rv.status_code == 200
+    assert b'togglePasswordVisibility' in rv.data
+    assert b'data-lucide="eye"' in rv.data
+    assert b'mobileDrawer' in rv.data
+    assert b'viewport-fit=cover' in rv.data
+
+    # Register page
+    rv = client.get('/register')
+    assert rv.status_code == 200
+    assert b'togglePasswordVisibility' in rv.data
+    assert b'data-lucide="eye"' in rv.data
+
+
+def test_multistep_wizard_structure(client):
+    """Verify 4-step wizard structure and review card on file complaint page."""
+    # Register & Login
+    client.post('/register', data={
+        'username': 'wizarduser',
+        'full_name': 'Wizard Citizen',
+        'email': 'wizard@gmail.com',
+        'phone': '9876543210',
+        'password': 'password123'
+    })
+    client.post('/login', data={'username': 'wizarduser', 'password': 'password123'})
+
+    # Direct access to file complaint with category
+    rv = client.get('/file-complaint?category=Roads%20%26%20Traffic')
+    assert rv.status_code == 200
+    # Check for all 4 step panes
+    assert b'step-pane-1' in rv.data
+    assert b'step-pane-2' in rv.data
+    assert b'step-pane-3' in rv.data
+    assert b'step-pane-4' in rv.data
+    assert b'step-progress-fill' in rv.data
+    # Check review preview card
+    assert b'review-category' in rv.data
+    assert b'review-title' in rv.data
+    assert b'review-location' in rv.data
+    # Check mobile navigation drawer and bottom nav bar
+    assert b'mobileDrawer' in rv.data
+    assert b'mobileMenuBtn' in rv.data

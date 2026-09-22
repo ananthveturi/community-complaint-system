@@ -50,9 +50,12 @@
                             <i data-lucide="lock" class="w-5 h-5"></i>
                         </div>
                         <input id="password" name="password" type="password" required
-                            class="block w-full pl-10 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
+                            class="block w-full pl-10 pr-11 px-3 py-2.5 border rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-base sm:text-sm"
                             style="background:var(--bg-input);border-color:var(--border);color:var(--text-primary);"
                             placeholder="••••••••">
+                        <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-primary transition-colors focus:outline-none cursor-pointer" aria-label="Toggle password visibility" title="Show password">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </button>
                     </div>
                 </div>
 
